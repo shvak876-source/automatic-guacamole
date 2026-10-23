@@ -270,16 +270,30 @@ const PLAN = {
 const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 
 // ---------- Storage: localStorage always, plus the artifact's private db when it is available ----------
+// Cloud layout (one flat per-viewer collection data/users/<uid>):
+//   "drafts"   { drafts, updated }   the workouts in progress
+//   "s_<id>"   one finished session
+//   "p_<exId>" { src }               a custom exercise photo
+// On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
 const LS_KEY = 'gymAB.v1';
-let state = { sessions: [], drafts: {}, photos: {} };
+let state = { sessions: [], drafts: {}, photos: {}, updated: 0 };
+let storageOk = true;
 function lsRead() { try { const s = JSON.parse(localStorage.getItem(LS_KEY)); if (s && Array.isArray(s.sessions)) return s; } catch (e) {} return null; }
-function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+function lsWrite() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch (e) { if (storageOk) { storageOk = false; showSaveProblem(); } }
+}
+function touch() { state.updated = Date.now(); lsWrite(); }
 
-const cloud = { db: null, base: null, queues: {} };
-function cloudWrite(path, fn) {
-  if (!cloud.db) return;
-  const prev = cloud.queues[path] || Promise.resolve();
-  cloud.queues[path] = prev.then(fn).catch(err => { console.warn('db', path, err); setSync('לא נשמר בענן'); });
+const cloud = { col: null, queues: {}, pending: 0 };
+function cloudWrite(key, fn) {
+  if (!cloud.col) return;
+  cloud.pending++; setSync('שומר…');
+  const prev = cloud.queues[key] || Promise.resolve();
+  cloud.queues[key] = prev.then(fn).then(
+    () => { if (--cloud.pending === 0) setSync('נשמר ✓'); },
+    err => { cloud.pending--; console.warn('db', key, err); setSync('לא נשמר בענן (נשמר במכשיר)'); },
+  );
 }
 async function cloudInit() {
   if (!window.claude || typeof window.claude.use !== 'function') return;
@@ -287,41 +301,57 @@ async function cloudInit() {
     const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
     const uid = user ? await user.id() : null;
     if (!db || !uid) return;
-    cloud.db = db;
-    cloud.base = db.doc('data/users/' + uid + '/app');
-    const [meta, ses, pho] = await Promise.all([
-      cloud.base.get(), cloud.base.collection('sessions').get(), cloud.base.collection('photos').get(),
-    ]);
-    const remote = {
-      drafts: (meta.exists && meta.data().drafts) || {},
-      sessions: ses.docs.map(d => d.data()).filter(Boolean),
-      photos: {},
-    };
-    pho.docs.forEach(d => { const v = d.data(); if (v && v.src) remote.photos[d.id] = v.src; });
-    // First cloud visit from a browser that already has a log: upload it.
-    if (!remote.sessions.length && state.sessions.length) {
-      state.sessions.forEach(saveSessionRemote);
-      Object.entries(state.photos).forEach(([k, v]) => savePhotoRemote(k, v));
-      saveDraftsRemote();
-    } else {
+    const col = db.collection('data/users/' + uid);
+    const snap = await col.get();
+    const remote = { sessions: [], photos: {}, drafts: {}, updated: 0 };
+    snap.docs.forEach(d => {
+      const v = d.data(); if (!v) return;
+      if (d.id === 'drafts') { remote.drafts = v.drafts || {}; remote.updated = v.updated || 0; }
+      else if (d.id.startsWith('s_') && v.id) remote.sessions.push(v);
+      else if (d.id.startsWith('p_') && v.src) remote.photos[d.id.slice(2)] = v.src;
+    });
+    cloud.col = col;
+    // Sessions and photos: union of both sides; upload what only this device has.
+    const haveRemote = new Set(remote.sessions.map(x => x.id));
+    const localOnly = state.sessions.filter(x => !haveRemote.has(x.id));
+    const haveLocal = new Set(state.sessions.map(x => x.id));
+    state.sessions.push(...remote.sessions.filter(x => !haveLocal.has(x.id)));
+    localOnly.forEach(saveSessionRemote);
+    Object.entries(state.photos).forEach(([k, v]) => { if (!remote.photos[k]) savePhotoRemote(k, v); });
+    state.photos = Object.assign({}, remote.photos, state.photos);
+    // Workouts in progress: the newer side wins.
+    if ((remote.updated || 0) > (state.updated || 0)) {
       Object.values(remote.drafts).forEach(d => d && d.ex && Object.values(d.ex).forEach(sets => sets.splice(SETS_MAX)));
-      state = remote;
-      lsWrite();
+      state.drafts = remote.drafts; state.updated = remote.updated;
+    } else if (state.updated) {
+      saveDraftsRemote();
     }
-    setSync('נשמר בחשבון שלך');
+    lsWrite();
+    if (!cloud.pending) setSync('נשמר ✓');
     render();
   } catch (e) { console.warn('db init', e); }
 }
-function saveSessionRemote(s) { cloudWrite('s/' + s.id, () => cloud.base.collection('sessions').doc(s.id).set(s)); }
-function saveDraftsRemote() { const d = JSON.parse(JSON.stringify(state.drafts)); cloudWrite('meta', () => cloud.base.set({ drafts: d })); }
+function saveSessionRemote(s) { cloudWrite('s_' + s.id, () => cloud.col.doc('s_' + s.id).set(s)); }
+function saveDraftsRemote() {
+  clearTimeout(draftTimer); draftTimer = null;
+  const body = JSON.parse(JSON.stringify({ drafts: state.drafts, updated: state.updated || Date.now() }));
+  cloudWrite('drafts', () => cloud.col.doc('drafts').set(body));
+}
 function savePhotoRemote(id, src) {
-  cloudWrite('p/' + id, () => src ? cloud.base.collection('photos').doc(id).set({ src }) : cloud.base.collection('photos').doc(id).delete());
+  cloudWrite('p_' + id, () => src ? cloud.col.doc('p_' + id).set({ src }) : cloud.col.doc('p_' + id).delete());
 }
 let draftTimer = null;
 function saveDrafts() {
-  lsWrite();
+  touch();
   clearTimeout(draftTimer);
-  draftTimer = setTimeout(saveDraftsRemote, 1200);
+  draftTimer = setTimeout(saveDraftsRemote, 600);
+}
+// Leaving or hiding the page sends any change still waiting for the timer.
+function flush() { if (draftTimer) saveDraftsRemote(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', flush);
+function showSaveProblem() {
+  setTimeout(() => toast('הדפדפן הזה לא שומר נתונים (מצב גלישה פרטית?). פתח את האתר בדפדפן רגיל.'), 300);
 }
 
 // ---------- Helpers ----------
@@ -611,7 +641,7 @@ function finish(day) {
   const s = { id: 's' + now.getTime(), day, date: now.toISOString(), min: min && min < 240 ? min : null, ex };
   state.sessions.push(s);
   delete state.drafts[day];
-  lsWrite(); saveSessionRemote(s); saveDraftsRemote();
+  touch(); saveSessionRemote(s); saveDraftsRemote();
   stopRest();
   view = 'H'; render(); window.scrollTo(0, 0);
   toast(`אימון ${day} נשמר. הבא בתור: ${day === 'A' ? 'B' : 'A'}`);
@@ -625,7 +655,7 @@ $('#history').addEventListener('click', async e => {
     if (!ds.dataset.armed) { ds.dataset.armed = '1'; ds.textContent = 'לחץ שוב למחיקה'; return; }
     const id = ds.dataset.delsession;
     state.sessions = state.sessions.filter(s => s.id !== id);
-    lsWrite(); cloudWrite('s/' + id, () => cloud.base.collection('sessions').doc(id).delete());
+    touch(); cloudWrite('s_' + id, () => cloud.col.doc('s_' + id).delete());
     render(); return;
   }
   if (t.id === 'copyBackup') {
@@ -671,8 +701,9 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
 try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
 
 // ---------- Boot ----------
+try { localStorage.setItem('gymAB.test', '1'); localStorage.removeItem('gymAB.test'); } catch (e) { storageOk = false; showSaveProblem(); }
 const saved = lsRead();
-if (saved) state = { sessions: saved.sessions, drafts: saved.drafts || {}, photos: saved.photos || {} };
+if (saved) state = { sessions: saved.sessions, drafts: saved.drafts || {}, photos: saved.photos || {}, updated: saved.updated || 0 };
 // Drafts started under an older set count keep at most SETS_MAX sets
 Object.values(state.drafts).forEach(d => d && d.ex && Object.values(d.ex).forEach(sets => sets.splice(SETS_MAX)));
 render();
