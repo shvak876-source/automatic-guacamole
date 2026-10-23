@@ -250,13 +250,12 @@ const PLAN = {
   A: [
     ['רגליים', ['legpress', 'legext', 'legcurl', 'calves']],
     ['חזה', ['dbbench', 'incdb', 'pecfly']],
-    ['כתפיים', ['shpress', 'lateral']],
+    ['כתפיים', ['shpress', 'lateral', 'reardelt']],
     ['יד אחורית', ['pushdown', 'ohext']],
   ],
   B: [
     ['רגליים', ['legpress', 'legext', 'legcurl', 'calves']],
     ['גב', ['latpull', 'row', 'pullover', 'lowback']],
-    ['כתף אחורית', ['reardelt']],
     ['יד קדמית', ['curl', 'hammer']],
   ],
 };
@@ -346,7 +345,12 @@ function draftFor(day) {
     }));
     state.drafts[day] = d;
   }
-  Object.keys(d.ex).forEach(id => { if (!EX[id]) delete d.ex[id]; });
+  const inPlan = new Set(PLAN[day].flatMap(([, ids]) => ids));
+  Object.keys(d.ex).forEach(id => { if (!inPlan.has(id)) delete d.ex[id]; });
+  // Exercises added to the plan after this draft was started
+  PLAN[day].forEach(([, ids]) => ids.forEach(id => {
+    if (!d.ex[id]) d.ex[id] = Array.from({ length: SETS_DEFAULT }, () => ({ w: '', r: '', done: false }));
+  }));
   return d;
 }
 
