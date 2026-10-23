@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: one narrow column like a gym card — sticky day switcher on top, exercise cards grouped by muscle, rest timer docked at the bottom. */
+/* Layout: one narrow column like a gym card — sticky day switcher on top, a folder per muscle group that opens to its exercise cards, rest timer docked at the bottom. */
 :root {
   --bg: #f3f2ee;
   --surface: #ffffff;
@@ -90,11 +90,20 @@ h1 b { color: var(--accent); }
 .warm .t { flex: 1; min-width: 0; }
 .warm .t small { display: block; color: var(--muted); }
 
-h2.group {
-  font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1;
-  margin: 8px 0 -6px; display: flex; align-items: baseline; gap: 10px;
+.folder { display: grid; gap: 12px; }
+.folder-head {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px;
 }
-h2.group small { font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--muted); }
+.folder-head .fname { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1; }
+.folder-head .fmeta { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+.folder-head .fcount { font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+.folder-head .arrow { flex: none; width: 10px; height: 10px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .2s; margin-top: -4px; }
+.folder.open .folder-head { border-color: var(--ink); }
+.folder.open .folder-head .arrow { transform: rotate(-135deg); margin-top: 4px; }
+.folder.done .folder-head { border-color: var(--done); background: var(--done-soft); }
+.folder.done .fcount { color: var(--done); font-weight: 600; }
+.folder-body { display: grid; gap: 12px; padding-inline-start: 10px; border-inline-start: 2px solid var(--line); }
 
 /* Exercise card */
 .ex { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -355,6 +364,7 @@ function draftFor(day) {
 
 // ---------- Rendering ----------
 let view = null;
+const openGroups = new Set();  // folders the viewer opened, e.g. "A0
 function render() {
   if (!view) view = nextDay();
   ['A', 'B', 'H'].forEach(v => $('#tab' + v).setAttribute('aria-selected', String(view === v)));
@@ -385,9 +395,17 @@ function renderWorkout(day) {
       <input type="checkbox" id="warmChk" ${d.warm ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--done)">
       <span class="t"><b>חימום 5 דקות</b><small>הליכה / אופניים / אליפטיקל</small></span>
     </label>`;
-  PLAN[day].forEach(([group, ids]) => {
-    html += `<h2 class="group">${esc(group)} <small>${ids.length} תרגילים</small></h2>`;
-    ids.forEach(id => { html += exHTML(day, id); });
+  PLAN[day].forEach(([group, ids], gi) => {
+    const key = day + gi, open = openGroups.has(key);
+    html += `<section class="folder${open ? ' open' : ''}" data-group="${gi}">
+      <button class="folder-head" data-folder="${key}" aria-expanded="${open}">
+        <span class="fname">${esc(group)}</span>
+        <span class="fmeta">${ids.length} תרגילים</span>
+        <span class="fcount"></span>
+        <span class="arrow" aria-hidden="true"></span>
+      </button>
+      <div class="folder-body"${open ? '' : ' hidden'}>${ids.map(id => exHTML(day, id)).join('')}</div>
+    </section>`;
   });
   html += `<button class="primary" id="finishBtn">סיום אימון ${day}</button>
     <div class="row"><button class="link" id="resetDay">איפוס האימון הנוכחי</button></div>`;
@@ -439,6 +457,13 @@ function updateProgress(day) {
   Object.values(d.ex).forEach(sets => sets.forEach(s => { total++; if (s.done) done++; }));
   $('#barFill').style.width = (total ? done / total * 100 : 0) + '%';
   $('#progressTxt').textContent = `${done}/${total} סטים`;
+  document.querySelectorAll('#workout .folder').forEach(f => {
+    const ids = PLAN[day][+f.dataset.group][1];
+    let t = 0, n = 0;
+    ids.forEach(id => d.ex[id].forEach(s => { t++; if (s.done) n++; }));
+    f.querySelector('.fcount').textContent = n === t ? '✓ הושלם' : `${n}/${t}`;
+    f.classList.toggle('done', n === t);
+  });
 }
 
 function spark(points) {
@@ -552,6 +577,15 @@ W.addEventListener('click', e => {
     saveDrafts();
     $('#ex-' + id).outerHTML = exHTML(view, id);
     updateProgress(view);
+    return;
+  }
+  const fh = t.closest('[data-folder]');
+  if (fh) {
+    const key = fh.dataset.folder, f = fh.parentElement, open = !openGroups.has(key);
+    if (open) openGroups.add(key); else openGroups.delete(key);
+    f.classList.toggle('open', open);
+    fh.setAttribute('aria-expanded', String(open));
+    f.querySelector('.folder-body').hidden = !open;
     return;
   }
   const ph = t.closest('[data-photo]');
