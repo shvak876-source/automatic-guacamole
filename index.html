@@ -124,15 +124,6 @@ h2.group small { font-family: var(--font-body); font-size: 12px; font-weight: 50
 .last b { color: var(--ink); font-weight: 600; }
 .up { font-size: 12.5px; color: var(--ink); background: var(--accent-soft); border-radius: 6px; padding: 2px 8px; justify-self: start; }
 
-.boxes { display: flex; gap: 8px; flex-wrap: wrap; }
-.box {
-  display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px;
-  border: 2px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 14px; font-weight: 500;
-}
-.box .tick { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--muted); display: grid; place-items: center; font-size: 12px; line-height: 1; color: transparent; }
-.box.on { background: var(--done); border-color: var(--done); color: #fff; }
-.box.on .tick { border-color: #fff; color: #fff; }
-.ex.check-only .ex-head { align-items: center; }
 .sets { border-top: 1px solid var(--line); padding: 8px 12px 12px; display: grid; gap: 6px; }
 .set-row { display: grid; grid-template-columns: 26px 1fr 1fr 44px; gap: 8px; align-items: center; }
 .set-row.hdr { font-size: 11px; color: var(--muted); letter-spacing: .3px; }
@@ -254,9 +245,6 @@ const EX = {
   reardelt:  { he: 'כתף אחורית במכונת פרפר', en: 'Reverse Pec Deck', img: 'Reverse_Machine_Flyes' },
   curl:      { he: 'כפיפת מרפקים במשקולות', en: 'Dumbbell Biceps Curl', img: 'Dumbbell_Bicep_Curl' },
   hammer:    { he: 'כפיפת מרפקים בפטישים', en: 'Hammer Curl', img: 'Hammer_Curls' },
-  crunch:    { he: 'ישר בטן', en: 'Crunch', img: 'Crunches', bw: true },
-  revcrunch: { he: 'בטן תחתונה', en: 'Reverse Crunch', img: 'Reverse_Crunch', bw: true },
-  russian:   { he: 'אלכסונים', en: 'Russian Twist', img: 'Russian_Twist', bw: true },
 };
 const PLAN = {
   A: [
@@ -264,14 +252,12 @@ const PLAN = {
     ['חזה', ['dbbench', 'incdb', 'pecfly']],
     ['כתפיים', ['shpress', 'lateral']],
     ['יד אחורית', ['pushdown', 'ohext']],
-    ['בטן', ['crunch', 'revcrunch', 'russian']],
   ],
   B: [
     ['רגליים', ['legpress', 'legext', 'legcurl', 'calves']],
     ['גב', ['latpull', 'row', 'pullover', 'lowback']],
     ['כתף אחורית', ['reardelt']],
     ['יד קדמית', ['curl', 'hammer']],
-    ['בטן', ['crunch', 'revcrunch', 'russian']],
   ],
 };
 const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
@@ -360,6 +346,7 @@ function draftFor(day) {
     }));
     state.drafts[day] = d;
   }
+  Object.keys(d.ex).forEach(id => { if (!EX[id]) delete d.ex[id]; });
   return d;
 }
 
@@ -408,28 +395,17 @@ function renderWorkout(day) {
 function exHTML(day, id) {
   const e = EX[id], sets = state.drafts[day].ex[id], last = lastFor(id);
   const complete = sets.length && sets.every(s => s.done);
-  if (e.bw) return `
-  <article class="ex check-only${complete ? ' complete' : ''}" id="ex-${id}">
-    <div class="ex-head">
-      ${picHTML(id)}
-      <div class="ex-info">
-        <div class="ex-name"><span>${esc(e.he)}</span><span class="chk" aria-hidden="true">✓</span></div>
-        <div class="ex-en">${esc(e.en)}</div>
-        <div class="boxes">${sets.map((s, i) => `<button class="box${s.done ? ' on' : ''}" data-ex="${id}" data-i="${i}" data-done aria-pressed="${s.done}"><span class="tick">✓</span>סט ${i + 1}</button>`).join('')}</div>
-      </div>
-    </div>
-  </article>`;
   let lastTxt = '';
   let upTxt = '';
   if (last) {
-    const s = last.sets.map(x => (e.bw && !x.w ? '' : `${x.w}×`) + (x.r || '?')).join(' · ');
+    const s = last.sets.map(x => `${x.w}×` + (x.r || '?')).join(' · ');
     lastTxt = `<div class="last">פעם קודמת (${fmtDate(last.date)}): <b class="num">${esc(s)}</b></div>`;
-    if (!e.bw && last.sets.length && last.sets.every(x => +x.r >= REP_TOP)) upTxt = `<div class="up">הגעת ל-${REP_TOP} חזרות בכל הסטים. אפשר להעלות משקל.</div>`;
+    if (last.sets.length && last.sets.every(x => +x.r >= REP_TOP)) upTxt = `<div class="up">הגעת ל-${REP_TOP} חזרות בכל הסטים. אפשר להעלות משקל.</div>`;
   }
   const rows = sets.map((s, i) => `
     <div class="set-row${s.done ? ' on' : ''}" data-ex="${id}" data-i="${i}">
       <span class="n">${i + 1}</span>
-      <span class="field"><input id="w-${day}-${id}-${i}" inputmode="decimal" placeholder="${e.bw ? 'גוף' : 'ק״ג'}" value="${esc(s.w)}" data-k="w" aria-label="משקל סט ${i + 1}"></span>
+      <span class="field"><input id="w-${day}-${id}-${i}" inputmode="decimal" placeholder="ק״ג" value="${esc(s.w)}" data-k="w" aria-label="משקל סט ${i + 1}"></span>
       <span class="field"><input id="r-${day}-${id}-${i}" inputmode="numeric" placeholder="8-12" value="${esc(s.r)}" data-k="r" aria-label="חזרות סט ${i + 1}"></span>
       <button class="done-btn" data-done aria-label="סמן סט ${i + 1} כבוצע">✓</button>
     </div>`).join('');
@@ -481,7 +457,7 @@ function renderHistory() {
     </div>`;
 
   // Progress per exercise: top weight per session, oldest → newest
-  const rows = Object.keys(EX).filter(id => !EX[id].bw).map(id => {
+  const rows = Object.keys(EX).map(id => {
     const pts = list.slice().reverse()
       .map(s => s.ex && s.ex[id] ? Math.max(...s.ex[id].map(x => +x.w || 0)) : null)
       .filter(v => v != null && v > 0);
@@ -493,9 +469,9 @@ function renderHistory() {
   }).join('') : '<p class="empty">אחרי האימון הראשון יופיע כאן המשקל הגבוה בכל תרגיל, והגרף יתמלא מאימון לאימון.</p>'}</div>`;
 
   html += `<div class="card"><h3>אימונים שהושלמו</h3>${list.length ? list.map(s => {
-    const n = Object.values(s.ex || {}).reduce((a, x) => a + x.length, 0);
+    const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
     return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${n} סטים${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
-      <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).map(([id, sets]) => `<div class="hist-row"><span>${esc(EX[id] ? EX[id].he : id)}</span><span class="num d">${EX[id] && EX[id].bw ? '✓ ' + sets.length + ' סטים' : sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
+      <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(EX[id] ? EX[id].he : id)}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
       <button class="link danger" data-delsession="${s.id}">מחיקת האימון</button></div></details>`;
   }).join('') : '<p class="empty">עוד לא נשמרו אימונים. סמן סטים באימון A או B ולחץ "סיום אימון".</p>'}</div>`;
 
@@ -554,11 +530,10 @@ W.addEventListener('click', e => {
   const t = e.target;
   const d = view !== 'H' ? draftFor(view) : null;
   if (t.closest('[data-done]')) {
-    const row = t.closest('[data-i]'), id = row.dataset.ex, set = d.ex[id][+row.dataset.i];
+    const row = t.closest('.set-row'), id = row.dataset.ex, set = d.ex[id][+row.dataset.i];
     set.done = !set.done;
     if (!d.start) d.start = new Date().toISOString();
     row.classList.toggle('on', set.done);
-    if (row.classList.contains('box')) row.setAttribute('aria-pressed', String(set.done));
     const card = $('#ex-' + id);
     card.classList.toggle('complete', d.ex[id].every(s => s.done));
     updateProgress(view);
