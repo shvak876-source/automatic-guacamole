@@ -224,7 +224,7 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
 (() => {
 'use strict';
 
-// ---------- Program (from the A/B card: 4×/week, 60 min, warmup 5 min, 3-4 sets × 8-12, 90″ rest, 50-70%) ----------
+// ---------- Program (from the A/B card: 4×/week, 60 min, warmup 5 min, 2 sets × 8-12, 90″ rest, 50-70%) ----------
 const IMG = 'img/';
 const EX = {
   legpress:  { he: 'לחיצת רגליים במכונה', en: 'Leg Press', img: 'Leg_Press' },
@@ -265,7 +265,7 @@ const PLAN = {
     ['בטן', ['crunch', 'revcrunch', 'russian']],
   ],
 };
-const SETS_DEFAULT = 3, SETS_MAX = 4, REP_TOP = 12, REST_SEC = 90;
+const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 
 // ---------- Storage: localStorage always, plus the artifact's private db when it is available ----------
 const LS_KEY = 'gymAB.v1';
@@ -302,6 +302,7 @@ async function cloudInit() {
       Object.entries(state.photos).forEach(([k, v]) => savePhotoRemote(k, v));
       saveDraftsRemote();
     } else {
+      Object.values(remote.drafts).forEach(d => d && d.ex && Object.values(d.ex).forEach(sets => sets.splice(SETS_MAX)));
       state = remote;
       lsWrite();
     }
@@ -379,7 +380,7 @@ function renderWorkout(day) {
   const d = draftFor(day);
   let html = `
     <div class="meta">
-      <span><b>3-4</b> סטים</span><span><b>8-12</b> חזרות</span><span><b>90″</b> מנוחה</span><span><b>50-70%</b> משקל</span><span><b>60</b> דק׳ לאימון</span>
+      <span><b>2</b> סטים</span><span><b>8-12</b> חזרות</span><span><b>90″</b> מנוחה</span><span><b>50-70%</b> משקל</span><span><b>60</b> דק׳ לאימון</span>
     </div>
     <label class="warm">
       <input type="checkbox" id="warmChk" ${d.warm ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--done)">
@@ -639,6 +640,8 @@ try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {})
 // ---------- Boot ----------
 const saved = lsRead();
 if (saved) state = { sessions: saved.sessions, drafts: saved.drafts || {}, photos: saved.photos || {} };
+// Drafts started under an older set count keep at most SETS_MAX sets
+Object.values(state.drafts).forEach(d => d && d.ex && Object.values(d.ex).forEach(sets => sets.splice(SETS_MAX)));
 render();
 cloudInit();
 })();
