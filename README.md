@@ -1,10 +1,10 @@
-# צ׳ק ליסט אימון A/B
+# יומן אימון A/B
 
 אפליקציית אינטרנט קטנה (קובץ `index.html` אחד) לתוכנית האימון A/B:
-צ׳ק ליסט של 2 סטים לכל תרגיל, עם תמונה של התרגיל. "סיום אימון" מנקה את הסימונים ומעביר לאימון הבא.
+צ׳ק ליסט לכל סט, רישום משקל וחזרות, טיימר מנוחה של 90 שניות, היסטוריה וגרף התקדמות.
 
 - התרגילים והחלוקה ל-A/B מוגדרים בראש הסקריפט (`EX` ו-`PLAN`).
-- הסימונים נשמרים בדפדפן (localStorage).
-- התמונות בתיקיית `img/` לקוחות מ-[free-exercise-db](https://github.com/yuhonas/free-exercise-db) (Unlicense).
+- הנתונים נשמרים בדפדפן (localStorage). בהיסטוריה יש גיבוי ושחזור כטקסט.
+- התמונות בתיקיית `img/` לקוחות מ-[free-exercise-db](https://github.com/yuhonas/free-exercise-db) (Unlicense). אפשר להחליף תמונה לכל תרגיל מתוך האפליקציה.
 
-אתר: https://shvak876-source.github.io/automatic-guacamole/ (אחרי הפעלת GitHub Pages על הענף `master`).
+הפעלה: לפתוח את `index.html`, או להפעיל GitHub Pages על הענף הראשי.
