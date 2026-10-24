@@ -183,6 +183,16 @@ h1 b { color: var(--accent); }
 .hist-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .hist-row .d { color: var(--muted); font-size: 13px; }
 .badge { font-family: var(--font-display); font-size: 22px; line-height: 1; background: var(--accent); color: var(--accent-ink); border-radius: 6px; padding: 2px 8px; }
+.heat-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.heat-stats b { display: block; font-family: var(--font-num); font-size: 22px; color: var(--accent); }
+.heat-stats span { font-size: 12px; color: var(--muted); }
+.heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
+.heat-year .hist-row { font-size: 14px; }
+.heat svg { display: block; width: 100%; height: auto; direction: ltr; }
+.heat .lbl { font-size: 9px; fill: var(--muted); font-family: inherit; }
+.heat .c { fill: var(--line); }
+.heat .c.on { fill: var(--accent); }
+.heat .c.today { stroke: var(--ink); stroke-width: 1; }
 .prog { display: grid; grid-template-columns: 1fr auto 96px; gap: 10px; align-items: center; padding-block: 6px; border-top: 1px solid var(--line); }
 .prog:first-of-type { border-top: 0; }
 .prog .nm { min-width: 0; font-size: 14px; }
@@ -511,6 +521,39 @@ function spark(points) {
   return `<svg viewBox="0 0 96 28" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${lx}" cy="${ly}" r="3" fill="var(--accent)"/></svg>`;
 }
 
+// ---------- Training days calendar: one cell per day, a column per week, Jan → Dec ----------
+const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+const HE_MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+function heatYear(year, days, todayKey) {
+  const C = 7, jan1 = new Date(year, 0, 1), off = jan1.getDay();
+  let cells = '', labels = '', n = 0;
+  for (let d = new Date(jan1); d.getFullYear() === year; d.setDate(d.getDate() + 1)) {
+    const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), row = d.getDay(), k = dayKey(d);
+    if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${HE_MONTHS[d.getMonth()]}</text>`;
+    const on = days.has(k); if (on) n++;
+    cells += `<rect class="c${on ? ' on' : ''}${k === todayKey ? ' today' : ''}" x="${col * C}" y="${14 + row * C}" width="${C - 1.5}" height="${C - 1.5}" rx="1.2"/>`;
+  }
+  return `<div class="heat-year"><div class="hist-row"><b>${year}</b><span class="d num">${n} ימים</span></div>
+    <div class="heat"><svg viewBox="0 0 ${54 * C} ${14 + 7 * C}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
+}
+function heatHTML(list) {
+  const days = new Set(list.map(s => dayKey(new Date(s.date))));
+  const now = new Date(), todayKey = dayKey(now), thisYear = now.getFullYear();
+  const first = list.length ? new Date(list[list.length - 1].date).getFullYear() : thisYear;
+  const inYear = [...days].filter(k => k.startsWith(thisYear + '-')).length;
+  // Weeks in a row (Sunday–Saturday) with at least one workout; the current week counts once it has one
+  const weekStart = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x.getTime(); };
+  const weeks = new Set(list.map(s => weekStart(new Date(s.date))));
+  let w = weekStart(now), streak = 0;
+  if (!weeks.has(w)) w -= 7 * 864e5;
+  while (weeks.has(w)) { streak++; const x = new Date(w); x.setDate(x.getDate() - 7); w = x.getTime(); }
+  let years = '';
+  for (let y = thisYear; y >= first; y--) years += heatYear(y, days, todayKey);
+  return `<div class="card"><h3>ימי אימון</h3>
+    <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
+    ${years}</div>`;
+}
+
 function renderHistory() {
   const list = sorted();
   const weekAgo = Date.now() - 7 * 864e5;
@@ -519,6 +562,7 @@ function renderHistory() {
       <div class="hist-row"><h3>השבוע</h3><span class="num">${thisWeek}/4 אימונים</span></div>
       <div class="bar"><i style="width:${Math.min(thisWeek / 4, 1) * 100}%"></i></div>
     </div>`;
+  html += heatHTML(list);
 
   // Progress per exercise: top weight per session, oldest → newest
   const rows = Object.keys(EX).map(id => {
