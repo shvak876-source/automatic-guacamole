@@ -29,6 +29,7 @@
   --accent-soft: #f6ead0;
   --done: #2f7d4f;
   --done-soft: #e2f0e6;
+  --both: #d33a2c;
   --font-display: "Karantina", "Arial Narrow", system-ui, sans-serif;
   --font-body: "IBM Plex Sans Hebrew", "Arial Hebrew", system-ui, sans-serif;
   --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -37,13 +38,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #121418; --surface: #1b1e24; --ink: #ecebe6; --muted: #9a9ea6; --line: #2c3038;
-    --accent: #e0a92e; --accent-ink: #15130d; --accent-soft: #33290f; --done: #5bbf83; --done-soft: #183224;
+    --accent: #e0a92e; --accent-ink: #15130d; --accent-soft: #33290f; --done: #5bbf83; --done-soft: #183224; --both: #ef5b4b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #121418; --surface: #1b1e24; --ink: #ecebe6; --muted: #9a9ea6; --line: #2c3038;
-  --accent: #e0a92e; --accent-ink: #15130d; --accent-soft: #33290f; --done: #5bbf83; --done-soft: #183224;
+  --accent: #e0a92e; --accent-ink: #15130d; --accent-soft: #33290f; --done: #5bbf83; --done-soft: #183224; --both: #ef5b4b;
   color-scheme: dark;
 }
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -186,13 +187,28 @@ h1 b { color: var(--accent); }
 .heat-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
 .heat-stats b { display: block; font-family: var(--font-num); font-size: 22px; color: var(--accent); }
 .heat-stats span { font-size: 12px; color: var(--muted); }
-.heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
-.heat-year .hist-row { font-size: 14px; }
-.heat svg { display: block; width: 100%; height: auto; direction: ltr; }
-.heat .lbl { font-size: 9px; fill: var(--muted); font-family: inherit; }
-.heat .c { fill: var(--line); }
-.heat .c.on { fill: var(--accent); }
-.heat .c.today { stroke: var(--ink); stroke-width: 1; }
+.heat-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.heat-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-inline-end: 5px; background: var(--accent); }
+.heat-legend i.both { background: var(--both); }
+.heat-yr { font-family: var(--font-display); font-size: 26px; line-height: 1; padding-top: 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+.heat-yr span { font-family: var(--font-body); font-size: 13px; color: var(--muted); }
+.months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px; }
+.mon { display: grid; gap: 4px; min-width: 0; }
+.mon .mn { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+.mon .mn span { color: var(--muted); font-weight: 400; font-family: var(--font-num); }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mgrid i { aspect-ratio: 1; border-radius: 3px; background: var(--line); }
+.mgrid i.pad { background: none; }
+.mgrid i.on { background: var(--accent); }
+.mgrid i.both { background: var(--both); }
+.mgrid i.today { outline: 2px solid var(--ink); outline-offset: -1px; }
+.mgrid i.future { opacity: .45; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-size: 15px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.cardio-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cardio-fields label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.badge.c { background: var(--both); color: #fff; font-family: var(--font-body); font-size: 13px; padding: 4px 8px; }
 .prog { display: grid; grid-template-columns: 1fr auto 96px; gap: 10px; align-items: center; padding-block: 6px; border-top: 1px solid var(--line); }
 .prog:first-of-type { border-top: 0; }
 .prog .nm { min-width: 0; font-size: 14px; }
@@ -224,6 +240,7 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabA" data-view="A">אימון A</button>
       <button class="tab" role="tab" id="tabB" data-view="B">אימון B</button>
+      <button class="tab" role="tab" id="tabC" data-view="C">אירובי</button>
       <button class="tab" role="tab" id="tabH" data-view="H">היסטוריה</button>
     </div>
     <div class="progress" id="progressRow">
@@ -233,6 +250,7 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
   </header>
 
   <main id="workout" class="wrap" style="margin:0"></main>
+  <section id="cardio" class="wrap" style="margin:0" hidden></section>
   <section id="history" class="wrap" style="margin:0" hidden></section>
 </div>
 
@@ -383,7 +401,7 @@ function lastFor(exId) {
   for (const s of sorted()) if (s.ex && s.ex[exId] && s.ex[exId].length) return { date: s.date, sets: s.ex[exId] };
   return null;
 }
-function nextDay() { const l = sorted()[0]; return l && l.day === 'A' ? 'B' : 'A'; }
+function nextDay() { const l = sorted().find(s => s.day !== 'C'); return l && l.day === 'A' ? 'B' : 'A'; }
 
 function draftFor(day) {
   let d = state.drafts[day];
@@ -413,14 +431,16 @@ let view = null;
 const openGroups = new Set();  // folders the viewer opened, e.g. "A0
 function render() {
   if (!view) view = nextDay();
-  ['A', 'B', 'H'].forEach(v => $('#tab' + v).setAttribute('aria-selected', String(view === v)));
+  ['A', 'B', 'C', 'H'].forEach(v => $('#tab' + v).setAttribute('aria-selected', String(view === v)));
   const nd = nextDay();
   ['A', 'B'].forEach(v => { $('#tab' + v).innerHTML = 'אימון ' + v + (v === nd ? '<span class="next">· הבא</span>' : ''); });
-  $('#workout').hidden = view === 'H';
+  const weights = view === 'A' || view === 'B';
+  $('#workout').hidden = !weights;
+  $('#cardio').hidden = view !== 'C';
   $('#history').hidden = view !== 'H';
-  $('#progressRow').hidden = view === 'H';
-  $('h1').innerHTML = view === 'H' ? 'היסטוריה' : 'אימון <b>' + view + '</b>';
-  if (view === 'H') renderHistory(); else renderWorkout(view);
+  $('#progressRow').hidden = !weights;
+  $('h1').innerHTML = view === 'H' ? 'היסטוריה' : view === 'C' ? '<b>אירובי</b>' : 'אימון <b>' + view + '</b>';
+  if (view === 'H') renderHistory(); else if (view === 'C') renderCardio(); else renderWorkout(view);
 }
 
 function picHTML(id) {
@@ -521,43 +541,89 @@ function spark(points) {
   return `<svg viewBox="0 0 96 28" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${lx}" cy="${ly}" r="3" fill="var(--accent)"/></svg>`;
 }
 
-// ---------- Training days calendar: one cell per day, a column per week, Jan → Dec ----------
+// ---------- Training days calendar: a small month grid per month, newest first ----------
+// Yellow = weights or cardio that day, red = both.
 const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
-const HE_MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
-function heatYear(year, days, todayKey) {
-  const C = 7, jan1 = new Date(year, 0, 1), off = jan1.getDay();
-  let cells = '', labels = '', n = 0;
-  for (let d = new Date(jan1); d.getFullYear() === year; d.setDate(d.getDate() + 1)) {
-    const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), row = d.getDay(), k = dayKey(d);
-    if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${HE_MONTHS[d.getMonth()]}</text>`;
-    const on = days.has(k); if (on) n++;
-    cells += `<rect class="c${on ? ' on' : ''}${k === todayKey ? ' today' : ''}" x="${col * C}" y="${14 + row * C}" width="${C - 1.5}" height="${C - 1.5}" rx="1.2"/>`;
+const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+function monthHTML(y, m, days, todayKey, now) {
+  const first = new Date(y, m, 1), len = new Date(y, m + 1, 0).getDate();
+  let cells = '<i class="pad"></i>'.repeat(first.getDay()), n = 0;
+  for (let i = 1; i <= len; i++) {
+    const d = new Date(y, m, i), k = dayKey(d), v = days.get(k);
+    if (v) n++;
+    const cls = [v === 3 ? 'both' : v ? 'on' : '', k === todayKey ? 'today' : '', d > now ? 'future' : ''].filter(Boolean).join(' ');
+    cells += `<i${cls ? ` class="${cls}"` : ''} title="${i}/${m + 1}"></i>`;
   }
-  return `<div class="heat-year"><div class="hist-row"><b>${year}</b><span class="d num">${n} ימים</span></div>
-    <div class="heat"><svg viewBox="0 0 ${54 * C} ${14 + 7 * C}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
+  return `<div class="mon"><div class="mn">${HE_MONTHS[m]}<span>${n || ''}</span></div><div class="mgrid">${cells}</div></div>`;
 }
 function heatHTML(list) {
-  const days = new Set(list.map(s => dayKey(new Date(s.date))));
+  const days = new Map();  // dayKey → 1 weights, 2 cardio, 3 both
+  list.forEach(s => { const k = dayKey(new Date(s.date)); days.set(k, (days.get(k) || 0) | (s.day === 'C' ? 2 : 1)); });
   const now = new Date(), todayKey = dayKey(now), thisYear = now.getFullYear();
-  const first = list.length ? new Date(list[list.length - 1].date).getFullYear() : thisYear;
-  const inYear = [...days].filter(k => k.startsWith(thisYear + '-')).length;
-  // Weeks in a row (Sunday–Saturday) with at least one workout; the current week counts once it has one
+  const oldest = list.length ? new Date(list[list.length - 1].date) : now;
+  const inYear = [...days.keys()].filter(k => k.startsWith(thisYear + '-')).length;
+  // Weeks in a row (Sunday–Saturday) with at least one training day; the current week counts once it has one
   const weekStart = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - x.getDay()); return x.getTime(); };
   const weeks = new Set(list.map(s => weekStart(new Date(s.date))));
   let w = weekStart(now), streak = 0;
   if (!weeks.has(w)) w -= 7 * 864e5;
   while (weeks.has(w)) { streak++; const x = new Date(w); x.setDate(x.getDate() - 7); w = x.getTime(); }
-  let years = '';
-  for (let y = thisYear; y >= first; y--) years += heatYear(y, days, todayKey);
+  let body = '';
+  for (let y = thisYear; y >= oldest.getFullYear(); y--) {
+    const top = y === thisYear ? now.getMonth() : 11, bottom = y === oldest.getFullYear() ? oldest.getMonth() : 0;
+    const n = [...days.keys()].filter(k => k.startsWith(y + '-')).length;
+    body += `<div class="heat-yr">${y}<span>${n} ימים</span></div><div class="months">`;
+    for (let m = top; m >= bottom; m--) body += monthHTML(y, m, days, todayKey, now);
+    body += '</div>';
+  }
   return `<div class="card"><h3>ימי אימון</h3>
     <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
-    ${years}</div>`;
+    <div class="heat-legend"><span><i></i>אימון או אירובי</span><span><i class="both"></i>אימון + אירובי</span></div>
+    ${body}</div>`;
 }
+
+// ---------- Cardio ----------
+const CARDIO_TYPES = ['הליכון', 'אופניים', 'אליפטיקל', 'ריצה', 'מדרגות', 'חתירה', 'שחייה', 'אחר'];
+let cardioType = null;
+function renderCardio() {
+  const list = sorted().filter(s => s.day === 'C');
+  if (!cardioType) cardioType = (list[0] && list[0].type) || CARDIO_TYPES[0];
+  const weekAgo = Date.now() - 7 * 864e5;
+  const week = list.filter(s => new Date(s.date).getTime() > weekAgo);
+  const weekMin = week.reduce((a, s) => a + (+s.min || 0), 0);
+  $('#cardio').innerHTML = `
+    <div class="card">
+      <h3>סוג</h3>
+      <div class="chips">${CARDIO_TYPES.map(t => `<button class="chip" data-ctype="${t}" aria-pressed="${t === cardioType}">${t}</button>`).join('')}</div>
+      <div class="cardio-fields">
+        <label>דקות<span class="field"><input id="cMin" inputmode="numeric" placeholder="30"></span></label>
+        <label>ק״מ (לא חובה)<span class="field"><input id="cKm" inputmode="decimal" placeholder="—"></span></label>
+      </div>
+    </div>
+    <button class="primary" id="saveCardio">שמירת אירובי</button>
+    <div class="card">
+      <div class="hist-row"><h3>השבוע</h3><span class="num">${week.length} פעמים · ${weekMin} דק׳</span></div>
+      ${list.length ? list.slice(0, 5).map(s => `<div class="hist-row"><span>${esc(s.type)} · ${fmtDate(s.date)}</span><span class="num d">${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}</span></div>`).join('') : '<p class="empty">עוד לא נשמר אירובי.</p>'}
+    </div>`;
+}
+$('#cardio').addEventListener('click', e => {
+  const chip = e.target.closest('[data-ctype]');
+  if (chip) { cardioType = chip.dataset.ctype; document.querySelectorAll('#cardio .chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip))); return; }
+  if (e.target.id !== 'saveCardio') return;
+  const min = Math.round(+$('#cMin').value.replace(',', '.'));
+  const km = $('#cKm').value.replace(',', '.').trim();
+  if (!(min > 0)) { toast('כמה דקות עשית?'); $('#cMin').focus(); return; }
+  const now = new Date();
+  const s = { id: 's' + now.getTime(), day: 'C', date: now.toISOString(), type: cardioType, min, km: +km > 0 ? km : '' };
+  state.sessions.push(s);
+  touch(); saveSessionRemote(s);
+  renderCardio(); toast(`${cardioType} ${min} דק׳ נשמר`);
+});
 
 function renderHistory() {
   const list = sorted();
   const weekAgo = Date.now() - 7 * 864e5;
-  const thisWeek = list.filter(s => new Date(s.date).getTime() > weekAgo).length;
+  const thisWeek = list.filter(s => s.day !== 'C' && new Date(s.date).getTime() > weekAgo).length;
   let html = `<div class="card">
       <div class="hist-row"><h3>השבוע</h3><span class="num">${thisWeek}/4 אימונים</span></div>
       <div class="bar"><i style="width:${Math.min(thisWeek / 4, 1) * 100}%"></i></div>
@@ -577,6 +643,8 @@ function renderHistory() {
   }).join('') : '<p class="empty">אחרי האימון הראשון יופיע כאן המשקל הגבוה בכל תרגיל, והגרף יתמלא מאימון לאימון.</p>'}</div>`;
 
   html += `<div class="card"><h3>אימונים שהושלמו</h3>${list.length ? list.map(s => {
+    if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}</span></span></summary>
+      <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
     return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${n} סטים${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
       <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(EX[id] ? EX[id].he : id)}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
@@ -636,7 +704,7 @@ W.addEventListener('change', e => {
 });
 W.addEventListener('click', e => {
   const t = e.target;
-  const d = view !== 'H' ? draftFor(view) : null;
+  const d = view === 'A' || view === 'B' ? draftFor(view) : null;
   if (t.closest('[data-done]')) {
     const row = t.closest('.set-row'), id = row.dataset.ex, set = d.ex[id][+row.dataset.i];
     set.done = !set.done;
