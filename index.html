@@ -192,11 +192,11 @@ h1 b { color: var(--accent); }
 .heat-legend i.both { background: var(--both); }
 .heat-yr { font-family: var(--font-display); font-size: 26px; line-height: 1; padding-top: 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
 .heat-yr span { font-family: var(--font-body); font-size: 13px; color: var(--muted); }
-.months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px; }
+.months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 18px; }
 .mon { display: grid; gap: 4px; min-width: 0; }
 .mon .mn { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
 .mon .mn span { color: var(--muted); font-weight: 400; font-family: var(--font-num); }
-.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
 .mgrid i { aspect-ratio: 1; border-radius: 3px; background: var(--line); }
 .mgrid i.pad { background: none; }
 .mgrid i.on { background: var(--accent); }
@@ -206,7 +206,7 @@ h1 b { color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-size: 15px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.cardio-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cardio-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cardio-fields label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .badge.c { background: var(--both); color: #fff; font-family: var(--font-body); font-size: 13px; padding: 4px 8px; }
 .prog { display: grid; grid-template-columns: 1fr auto 96px; gap: 10px; align-items: center; padding-block: 6px; border-top: 1px solid var(--line); }
@@ -541,7 +541,7 @@ function spark(points) {
   return `<svg viewBox="0 0 96 28" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${lx}" cy="${ly}" r="3" fill="var(--accent)"/></svg>`;
 }
 
-// ---------- Training days calendar: a small month grid per month, newest first ----------
+// ---------- Training days calendar: twelve month grids per year, newest year first ----------
 // Yellow = weights or cardio that day, red = both.
 const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
@@ -570,10 +570,9 @@ function heatHTML(list) {
   while (weeks.has(w)) { streak++; const x = new Date(w); x.setDate(x.getDate() - 7); w = x.getTime(); }
   let body = '';
   for (let y = thisYear; y >= oldest.getFullYear(); y--) {
-    const top = y === thisYear ? now.getMonth() : 11, bottom = y === oldest.getFullYear() ? oldest.getMonth() : 0;
     const n = [...days.keys()].filter(k => k.startsWith(y + '-')).length;
     body += `<div class="heat-yr">${y}<span>${n} ימים</span></div><div class="months">`;
-    for (let m = top; m >= bottom; m--) body += monthHTML(y, m, days, todayKey, now);
+    for (let m = 0; m < 12; m++) body += monthHTML(y, m, days, todayKey, now);
     body += '</div>';
   }
   return `<div class="card"><h3>ימי אימון</h3>
@@ -597,13 +596,14 @@ function renderCardio() {
       <div class="chips">${CARDIO_TYPES.map(t => `<button class="chip" data-ctype="${t}" aria-pressed="${t === cardioType}">${t}</button>`).join('')}</div>
       <div class="cardio-fields">
         <label>דקות<span class="field"><input id="cMin" inputmode="numeric" placeholder="30"></span></label>
-        <label>ק״מ (לא חובה)<span class="field"><input id="cKm" inputmode="decimal" placeholder="—"></span></label>
+        <label>ק״מ<span class="field"><input id="cKm" inputmode="decimal" placeholder="—"></span></label>
+        <label>שיפוע %<span class="field"><input id="cInc" inputmode="decimal" placeholder="—"></span></label>
       </div>
     </div>
     <button class="primary" id="saveCardio">שמירת אירובי</button>
     <div class="card">
       <div class="hist-row"><h3>השבוע</h3><span class="num">${week.length} פעמים · ${weekMin} דק׳</span></div>
-      ${list.length ? list.slice(0, 5).map(s => `<div class="hist-row"><span>${esc(s.type)} · ${fmtDate(s.date)}</span><span class="num d">${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}</span></div>`).join('') : '<p class="empty">עוד לא נשמר אירובי.</p>'}
+      ${list.length ? list.slice(0, 5).map(s => `<div class="hist-row"><span>${esc(s.type)} · ${fmtDate(s.date)}</span><span class="num d">${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></div>`).join('') : '<p class="empty">עוד לא נשמר אירובי.</p>'}
     </div>`;
 }
 $('#cardio').addEventListener('click', e => {
@@ -611,10 +611,10 @@ $('#cardio').addEventListener('click', e => {
   if (chip) { cardioType = chip.dataset.ctype; document.querySelectorAll('#cardio .chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip))); return; }
   if (e.target.id !== 'saveCardio') return;
   const min = Math.round(+$('#cMin').value.replace(',', '.'));
-  const km = $('#cKm').value.replace(',', '.').trim();
+  const km = $('#cKm').value.replace(',', '.').trim(), inc = $('#cInc').value.replace(',', '.').trim();
   if (!(min > 0)) { toast('כמה דקות עשית?'); $('#cMin').focus(); return; }
   const now = new Date();
-  const s = { id: 's' + now.getTime(), day: 'C', date: now.toISOString(), type: cardioType, min, km: +km > 0 ? km : '' };
+  const s = { id: 's' + now.getTime(), day: 'C', date: now.toISOString(), type: cardioType, min, km: +km > 0 ? km : '', inc: +inc > 0 ? inc : '' };
   state.sessions.push(s);
   touch(); saveSessionRemote(s);
   renderCardio(); toast(`${cardioType} ${min} דק׳ נשמר`);
@@ -643,7 +643,7 @@ function renderHistory() {
   }).join('') : '<p class="empty">אחרי האימון הראשון יופיע כאן המשקל הגבוה בכל תרגיל, והגרף יתמלא מאימון לאימון.</p>'}</div>`;
 
   html += `<div class="card"><h3>אימונים שהושלמו</h3>${list.length ? list.map(s => {
-    if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}</span></span></summary>
+    if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></span></summary>
       <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
     return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${n} סטים${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
