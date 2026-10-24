@@ -190,19 +190,15 @@ h1 b { color: var(--accent); }
 .heat-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
 .heat-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-inline-end: 5px; background: var(--accent); }
 .heat-legend i.both { background: var(--both); }
-.heat-yr { font-family: var(--font-display); font-size: 26px; line-height: 1; padding-top: 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
-.heat-yr span { font-family: var(--font-body); font-size: 13px; color: var(--muted); }
-.months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 18px; }
-.mon { display: grid; gap: 4px; min-width: 0; }
-.mon .mn { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
-.mon .mn span { color: var(--muted); font-weight: 400; font-family: var(--font-num); }
-.mgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
-.mgrid i { aspect-ratio: 1; border-radius: 3px; background: var(--line); }
-.mgrid i.pad { background: none; }
-.mgrid i.on { background: var(--accent); }
-.mgrid i.both { background: var(--both); }
-.mgrid i.today { outline: 2px solid var(--ink); outline-offset: -1px; }
-.mgrid i.future { opacity: .45; }
+.heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
+.heat-year .hist-row { font-size: 14px; }
+.heat { margin-inline: -8px; }
+.heat svg { display: block; width: 100%; height: auto; direction: ltr; }
+.heat .lbl { font-size: 8.5px; fill: var(--muted); font-family: inherit; }
+.heat .c { fill: var(--line); }
+.heat .c.on { fill: var(--accent); }
+.heat .c.both { fill: var(--both); }
+.heat .c.today { stroke: var(--ink); stroke-width: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-size: 15px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
@@ -541,20 +537,21 @@ function spark(points) {
   return `<svg viewBox="0 0 96 28" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${lx}" cy="${ly}" r="3" fill="var(--accent)"/></svg>`;
 }
 
-// ---------- Training days calendar: twelve month grids per year, newest year first ----------
+// ---------- Training days calendar: one cell per day, a column per week, Jan → Dec ----------
 // Yellow = weights or cardio that day, red = both.
 const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
-const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-function monthHTML(y, m, days, todayKey, now) {
-  const first = new Date(y, m, 1), len = new Date(y, m + 1, 0).getDate();
-  let cells = '<i class="pad"></i>'.repeat(first.getDay()), n = 0;
-  for (let i = 1; i <= len; i++) {
-    const d = new Date(y, m, i), k = dayKey(d), v = days.get(k);
+const HE_MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+function heatYear(year, days, todayKey) {
+  const C = 7, jan1 = new Date(year, 0, 1), off = jan1.getDay();
+  let cells = '', labels = '', n = 0;
+  for (let d = new Date(jan1); d.getFullYear() === year; d.setDate(d.getDate() + 1)) {
+    const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), row = d.getDay(), k = dayKey(d), v = days.get(k);
+    if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${HE_MONTHS[d.getMonth()]}</text>`;
     if (v) n++;
-    const cls = [v === 3 ? 'both' : v ? 'on' : '', k === todayKey ? 'today' : '', d > now ? 'future' : ''].filter(Boolean).join(' ');
-    cells += `<i${cls ? ` class="${cls}"` : ''} title="${i}/${m + 1}"></i>`;
+    cells += `<rect class="c${v === 3 ? ' both' : v ? ' on' : ''}${k === todayKey ? ' today' : ''}" x="${col * C}" y="${14 + row * C}" width="${C - 1.2}" height="${C - 1.2}" rx="1.2"/>`;
   }
-  return `<div class="mon"><div class="mn">${HE_MONTHS[m]}<span>${n || ''}</span></div><div class="mgrid">${cells}</div></div>`;
+  return `<div class="heat-year"><div class="hist-row"><b>${year}</b><span class="d num">${n} ימים</span></div>
+    <div class="heat"><svg viewBox="-3 0 ${54 * C + 3} ${14 + 7 * C}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
 }
 function heatHTML(list) {
   const days = new Map();  // dayKey → 1 weights, 2 cardio, 3 both
@@ -569,12 +566,7 @@ function heatHTML(list) {
   if (!weeks.has(w)) w -= 7 * 864e5;
   while (weeks.has(w)) { streak++; const x = new Date(w); x.setDate(x.getDate() - 7); w = x.getTime(); }
   let body = '';
-  for (let y = thisYear; y >= oldest.getFullYear(); y--) {
-    const n = [...days.keys()].filter(k => k.startsWith(y + '-')).length;
-    body += `<div class="heat-yr">${y}<span>${n} ימים</span></div><div class="months">`;
-    for (let m = 0; m < 12; m++) body += monthHTML(y, m, days, todayKey, now);
-    body += '</div>';
-  }
+  for (let y = thisYear; y >= oldest.getFullYear(); y--) body += heatYear(y, days, todayKey);
   return `<div class="card"><h3>ימי אימון</h3>
     <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
     <div class="heat-legend"><span><i></i>אימון או אירובי</span><span><i class="both"></i>אימון + אירובי</span></div>
