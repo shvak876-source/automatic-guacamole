@@ -203,6 +203,8 @@ h1 b { color: var(--accent); }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-size: 15px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .cardio-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.when { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.when input { height: 38px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: inherit; padding: 0 10px; font: inherit; }
 .cardio-fields label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .badge.c { background: var(--both); color: #fff; font-family: var(--font-body); font-size: 13px; padding: 4px 8px; }
 .prog { display: grid; grid-template-columns: 1fr auto 96px; gap: 10px; align-items: center; padding-block: 6px; border-top: 1px solid var(--line); }
@@ -576,6 +578,11 @@ function heatHTML(list) {
 // ---------- Cardio ----------
 const CARDIO_TYPES = ['הליכון', 'אופניים', 'אליפטיקל', 'ריצה', 'מדרגות', 'חתירה', 'שחייה', 'אחר'];
 let cardioType = null;
+const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function syncWhenChips() {
+  const v = $('#cDate').value, t = new Date();
+  document.querySelectorAll('#cardio [data-cday]').forEach(c => { const d = new Date(t); d.setDate(d.getDate() - +c.dataset.cday); c.setAttribute('aria-pressed', String(isoDay(d) === v)); });
+}
 function renderCardio() {
   const list = sorted().filter(s => s.day === 'C');
   if (!cardioType) cardioType = (list[0] && list[0].type) || CARDIO_TYPES[0];
@@ -591,6 +598,8 @@ function renderCardio() {
         <label>ק״מ<span class="field"><input id="cKm" inputmode="decimal" placeholder="—"></span></label>
         <label>שיפוע %<span class="field"><input id="cInc" inputmode="decimal" placeholder="—"></span></label>
       </div>
+      <h3>מתי</h3>
+      <div class="when"><button class="chip" data-cday="0" aria-pressed="true">היום</button><button class="chip" data-cday="1" aria-pressed="false">אתמול</button><input type="date" id="cDate" value="${isoDay(new Date())}" max="${isoDay(new Date())}" aria-label="תאריך"></div>
     </div>
     <button class="primary" id="saveCardio">שמירת אירובי</button>
     <div class="card">
@@ -601,16 +610,23 @@ function renderCardio() {
 $('#cardio').addEventListener('click', e => {
   const chip = e.target.closest('[data-ctype]');
   if (chip) { cardioType = chip.dataset.ctype; document.querySelectorAll('#cardio .chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip))); return; }
+  const cday = e.target.closest('[data-cday]');
+  if (cday) { const d = new Date(); d.setDate(d.getDate() - +cday.dataset.cday); $('#cDate').value = isoDay(d); syncWhenChips(); return; }
   if (e.target.id !== 'saveCardio') return;
   const min = Math.round(+$('#cMin').value.replace(',', '.'));
   const km = $('#cKm').value.replace(',', '.').trim(), inc = $('#cInc').value.replace(',', '.').trim();
   if (!(min > 0)) { toast('כמה דקות עשית?'); $('#cMin').focus(); return; }
-  const now = new Date();
-  const s = { id: 's' + now.getTime(), day: 'C', date: now.toISOString(), type: cardioType, min, km: +km > 0 ? km : '', inc: +inc > 0 ? inc : '' };
+  // A past day is stored at noon so it lands on that day in the calendar
+  const now = new Date(), picked = $('#cDate').value;
+  let when = now;
+  if (picked && picked !== isoDay(now)) { const [y, m, d] = picked.split('-').map(Number); when = new Date(y, m - 1, d, 12); }
+  if (when > now) { toast('אי אפשר לבחור תאריך עתידי'); return; }
+  const s = { id: 's' + now.getTime(), day: 'C', date: when.toISOString(), type: cardioType, min, km: +km > 0 ? km : '', inc: +inc > 0 ? inc : '' };
   state.sessions.push(s);
   touch(); saveSessionRemote(s);
-  renderCardio(); toast(`${cardioType} ${min} דק׳ נשמר`);
+  renderCardio(); toast(`${cardioType} ${min} דק׳ נשמר` + (when !== now ? ` ל-${fmtDate(s.date)}` : ''));
 });
+$('#cardio').addEventListener('change', e => { if (e.target.id === 'cDate') syncWhenChips(); });
 
 function renderHistory() {
   const list = sorted();
