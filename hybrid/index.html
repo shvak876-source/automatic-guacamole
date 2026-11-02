@@ -200,6 +200,11 @@ h1 b { color: var(--accent); }
 .heat .c.both { fill: var(--both); }
 .heat .c.today { stroke: var(--ink); stroke-width: 1; }
 .run.complete { border-color: var(--done); }
+.run .tgt { display: grid; grid-template-columns: 1fr 110px; align-items: center; gap: 10px; font-size: 14px; }
+.run .last { font-size: 13px; color: var(--muted); }
+.lap .lap-pace { font-size: 12px; color: var(--muted); text-align: center; }
+.lap.fast .lap-pace { color: var(--done); }
+.lap.slow .lap-pace { color: var(--both); }
 .run .run-on { background: var(--done); color: #fff; font-family: var(--font-body); font-size: 16px; padding: 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; font-size: 15px; }
@@ -243,7 +248,6 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
       <button class="tab" role="tab" id="tab3" data-view="3">יום ג</button>
       <button class="tab" role="tab" id="tab4" data-view="4">יום ד</button>
       <button class="tab" role="tab" id="tab5" data-view="5">יום ה</button>
-      <button class="tab" role="tab" id="tabC" data-view="C">אירובי</button>
       <button class="tab" role="tab" id="tabH" data-view="H">היסטוריה</button>
     </div>
     <div class="progress" id="progressRow">
@@ -253,7 +257,6 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
   </header>
 
   <main id="workout" class="wrap" style="margin:0"></main>
-  <section id="cardio" class="wrap" style="margin:0" hidden></section>
   <section id="history" class="wrap" style="margin:0" hidden></section>
 </div>
 
@@ -271,36 +274,33 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
 'use strict';
 
 // ---------- Program (from the A/B card: 4×/week, 60 min, warmup 5 min, 2 sets × 8-12, 90″ rest, 50-70%) ----------
-const IMG = '../img/';
+const IMG = 'img/';
 const EX = {
   legpress:  { he: 'לחיצת רגליים במכונה', en: 'Leg Press', img: 'Leg_Press' },
   legext:    { he: 'פשיטת ברכיים במכונה', en: 'Leg Extension', img: 'Leg_Extensions' },
   legcurl:   { he: 'כפיפת ברכיים במכונה', en: 'Leg Curl', img: 'Seated_Leg_Curl' },
   calves:    { he: 'תאומים', en: 'Calf Raise', img: 'Standing_Calf_Raises' },
-  dbbench:   { he: 'לחיצת חזה במשקולות', en: 'Dumbbell Bench Press', img: 'Dumbbell_Bench_Press' },
-  incdb:     { he: 'לחיצת חזה בשיפוע במשקולות', en: 'Incline Dumbbell Press', img: 'Incline_Dumbbell_Press' },
-  pecfly:    { he: 'פרפר חזה במכונה', en: 'Pec Deck / Butterfly', img: 'Butterfly' },
-  shpress:   { he: 'לחיצת כתפיים במשקולות', en: 'Dumbbell Shoulder Press', img: 'Dumbbell_Shoulder_Press' },
+  bbbench:   { he: 'לחיצת חזה במוט', en: 'Barbell Bench Press', img: 'Barbell_Bench_Press_-_Medium_Grip' },
+  incbb:     { he: 'לחיצת חזה בשיפוע במוט', en: 'Incline Barbell Press', img: 'Barbell_Incline_Bench_Press_-_Medium_Grip' },
+  cablefly:  { he: 'פרפר בכבלים', en: 'Cable Crossover', img: 'Cable_Crossover' },
   lateral:   { he: 'הרחקת כתפיים במשקולות', en: 'Lateral Raise', img: 'Side_Lateral_Raise' },
   pushdown:  { he: 'פשיטת מרפקים בכבל קרוס', en: 'Cable Triceps Pushdown', img: 'Triceps_Pushdown' },
   ohext:     { he: 'פשיטת מרפקים במשקולת', en: 'Overhead Dumbbell Extension', img: 'Standing_Dumbbell_Triceps_Extension' },
-  latpull:   { he: 'פולי עליון באחיזה רחבה', en: 'Wide-Grip Lat Pulldown', img: 'Wide-Grip_Lat_Pulldown' },
-  row:       { he: 'חתירה במכונה', en: 'Machine Row', img: 'Leverage_Iso_Row' },
-  pullover:  { he: 'פול אובר במשקולת', en: 'Dumbbell Pullover', img: 'Straight-Arm_Dumbbell_Pullover' },
-  lowback:   { he: 'גב תחתון במשקולת', en: 'Back Extension', img: 'Hyperextensions_Back_Extensions' },
-  reardelt:  { he: 'כתף אחורית במכונת פרפר', en: 'Reverse Pec Deck', img: 'Reverse_Machine_Flyes' },
+  pullup:    { he: 'מתח', en: 'Pull-Up', img: 'Pullups' },
+  cablerow:  { he: 'חתירה בכבלים', en: 'Seated Cable Row', img: 'Seated_Cable_Rows' },
+  cablepo:   { he: 'פול אובר בכבלים', en: 'Straight-Arm Cable Pulldown', img: 'Straight-Arm_Pulldown' },
   curl:      { he: 'כפיפת מרפקים במשקולות', en: 'Dumbbell Biceps Curl', img: 'Dumbbell_Bicep_Curl' },
   hammer:    { he: 'כפיפת מרפקים בפטישים', en: 'Hammer Curl', img: 'Hammer_Curls' },
 };
 const GROUPS = {
   A: [
+    ['חזה', ['bbbench', 'incbb', 'cablefly']],
     ['רגליים', ['legpress', 'legext', 'legcurl', 'calves']],
-    ['חזה', ['dbbench', 'incdb', 'pecfly']],
     ['יד אחורית', ['pushdown', 'ohext']],
   ],
   B: [
-    ['גב', ['latpull', 'row', 'pullover', 'lowback']],
-    ['כתפיים', ['shpress', 'lateral', 'reardelt']],
+    ['גב', ['pullup', 'cablerow', 'cablepo']],
+    ['כתפיים', ['lateral']],
     ['יד קדמית', ['curl', 'hammer']],
   ],
 };
@@ -309,7 +309,7 @@ const WEEK = {
   1: { name: 'א', w: 'B', run: { name: 'ריצת טמפו', km: '3' } },
   2: { name: 'ב', w: 'A' },
   3: { name: 'ג', run: { name: 'ריצת נפח רגועה', km: '6' } },
-  4: { name: 'ד', w: 'B', run: { name: 'ריצת אינטרוולים', km: '' } },
+  4: { name: 'ד', w: 'B', run: { name: 'אינטרוולים', reps: 6, m: 400 } },
   5: { name: 'ה', w: 'A' },
 };
 const W_TITLE = { A: 'חזה + רגליים + יד אחורית', B: 'גב + כתפיים + יד קדמית' };
@@ -416,6 +416,15 @@ function lastFor(exId) {
   for (const s of sorted()) if (s.ex && s.ex[exId] && s.ex[exId].length) return { date: s.date, sets: s.ex[exId] };
   return null;
 }
+function lastRun(day) { const s = sorted().find(x => x.day === day && x.run); return s ? s.run : null; }
+// "1:45" or "105" → seconds
+function secs(v) {
+  v = String(v || '').trim(); if (!v) return 0;
+  if (v.includes(':')) { const [m, x] = v.split(':'); return (+m || 0) * 60 + (+x || 0); }
+  return +v || 0;
+}
+const mmss = n => Math.floor(n / 60) + ':' + String(Math.round(n % 60)).padStart(2, '0');
+const runDone = r => !!r && (r.laps ? r.laps.some(l => l.done) : r.done);
 function todayDay() { const g = new Date().getDay(); return g <= 4 ? String(g + 1) : null; }
 function nextDay() { return todayDay() || '1'; }
 
@@ -433,7 +442,13 @@ function draftFor(day) {
     }));
     state.drafts[day] = d;
   }
-  if (WEEK[day].run && !d.run) d.run = { km: WEEK[day].run.km, min: '', done: false };
+  const rp = WEEK[day].run;
+  if (rp && (!d.run || !!rp.reps !== !!d.run.laps)) {
+    if (rp.reps) {
+      const prev = lastRun(day);
+      d.run = { target: prev && prev.target || '', laps: Array.from({ length: rp.reps }, () => ({ t: '', done: false })) };
+    } else d.run = { km: rp.km, min: '', done: false };
+  }
   const inPlan = new Set(PLAN[day].flatMap(([, ids]) => ids));
   Object.keys(d.ex).forEach(id => { if (!inPlan.has(id)) delete d.ex[id]; });
   // Exercises added to the plan after this draft was started
@@ -448,16 +463,15 @@ let view = null;
 const openGroups = new Set();  // folders the viewer opened, e.g. "A0
 function render() {
   if (!view) view = nextDay();
-  [...DAYS, 'C', 'H'].forEach(v => $('#tab' + v).setAttribute('aria-selected', String(view === v)));
+  [...DAYS, 'H'].forEach(v => $('#tab' + v).setAttribute('aria-selected', String(view === v)));
   const td = todayDay();
   DAYS.forEach(v => { $('#tab' + v).innerHTML = 'יום ' + WEEK[v].name + (v === td ? '<span class="next">· היום</span>' : ''); });
   const weights = DAYS.includes(view);
   $('#workout').hidden = !weights;
-  $('#cardio').hidden = view !== 'C';
   $('#history').hidden = view !== 'H';
   $('#progressRow').hidden = !weights;
-  $('h1').innerHTML = view === 'H' ? 'היסטוריה' : view === 'C' ? '<b>אירובי</b>' : 'יום <b>' + WEEK[view].name + '</b>';
-  if (view === 'H') renderHistory(); else if (view === 'C') renderCardio(); else renderWorkout(view);
+  $('h1').innerHTML = view === 'H' ? 'היסטוריה' : 'יום <b>' + WEEK[view].name + '</b>';
+  if (view === 'H') renderHistory(); else renderWorkout(view);
 }
 
 function picHTML(id) {
@@ -506,8 +520,45 @@ function pace(km, min) {
   const sec = Math.round(m * 60 / k);
   return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
 }
+function lapsHTML(day) {
+  const r = state.drafts[day].run, plan = WEEK[day].run, tgt = secs(r.target), prev = lastRun(day);
+  const times = r.laps.map(l => secs(l.t)).filter(Boolean);
+  const avg = times.length ? mmss(times.reduce((a, b) => a + b, 0) / times.length) : '';
+  const rows = r.laps.map((l, i) => {
+    const t = secs(l.t), cls = tgt && t ? (t <= tgt ? ' fast' : ' slow') : '';
+    return `<div class="set-row lap${l.done ? ' on' : ''}${cls}" data-lap="${i}">
+      <span class="n">${i + 1}</span>
+      <span class="field"><input data-lapt="${i}" inputmode="decimal" placeholder="${esc(r.target || '1:45')}" value="${esc(l.t)}" aria-label="זמן חזרה ${i + 1}"></span>
+      <span class="lap-pace num">${t ? mmss(t * 1000 / plan.m) + ' לק״מ' : ''}</span>
+      <button class="done-btn" data-lapdone aria-label="סמן חזרה ${i + 1}">✓</button>
+    </div>`;
+  }).join('');
+  return `<section class="card run${runDone(r) ? ' complete' : ''}" id="runCard">
+    <div class="hist-row"><h3>${esc(plan.name)}</h3><span class="d">${plan.reps} × ${plan.m} מ׳</span></div>
+    <label class="tgt">זמן יעד ל-${plan.m} מ׳<span class="field"><input data-run="target" inputmode="decimal" placeholder="1:45" value="${esc(r.target)}"></span></label>
+    ${prev && prev.laps ? `<div class="last">פעם קודמת: <b class="num">${prev.laps.filter(Boolean).map(esc).join(' · ')}</b></div>` : ''}
+    <div class="set-row hdr"><span>#</span><span>זמן (דק׳:שנ׳)</span><span>קצב</span><span></span></div>
+    ${rows}
+    <div class="hist-row" id="lapAvg"${avg ? '' : ' hidden'}><span class="d">ממוצע</span><span class="num">${avg}</span></div>
+  </section>`;
+}
+// Pace colours and average follow the typed times without redrawing the card
+function refreshLaps(day) {
+  const r = state.drafts[day].run, tgt = secs(r.target), m = WEEK[day].run.m;
+  r.laps.forEach((l, i) => {
+    const row = document.querySelector(`[data-lap="${i}"]`), t = secs(l.t); if (!row) return;
+    row.classList.toggle('fast', !!(tgt && t && t <= tgt));
+    row.classList.toggle('slow', !!(tgt && t && t > tgt));
+    row.querySelector('.lap-pace').textContent = t ? mmss(t * 1000 / m) + ' לק״מ' : '';
+    row.querySelector('input').placeholder = r.target || '1:45';
+  });
+  const times = r.laps.map(l => secs(l.t)).filter(Boolean);
+  $('#lapAvg').hidden = !times.length;
+  $('#lapAvg .num').textContent = times.length ? mmss(times.reduce((a, b) => a + b, 0) / times.length) : '';
+}
 function runHTML(day) {
   const r = state.drafts[day].run, plan = WEEK[day].run;
+  if (plan.reps) return lapsHTML(day);
   return `<section class="card run${r.done ? ' complete' : ''}" id="runCard">
     <div class="hist-row"><h3>${esc(plan.name)}</h3><span class="d">${plan.km ? plan.km + ' ק״מ' : 'ריצה'}</span></div>
     <div class="cardio-fields">
@@ -561,7 +612,8 @@ function updateProgress(day) {
   const d = state.drafts[day];
   let total = 0, done = 0;
   Object.values(d.ex).forEach(sets => sets.forEach(s => { total++; if (s.done) done++; }));
-  if (d.run) { total++; if (d.run.done) done++; }
+  if (d.run && d.run.laps) d.run.laps.forEach(l => { total++; if (l.done) done++; });
+  else if (d.run) { total++; if (d.run.done) done++; }
   $('#barFill').style.width = (total ? done / total * 100 : 0) + '%';
   $('#progressTxt').textContent = `${done}/${total}`;
   document.querySelectorAll('#workout .folder').forEach(f => {
@@ -618,59 +670,6 @@ function heatHTML(list) {
     ${body}</div>`;
 }
 
-// ---------- Cardio ----------
-const CARDIO_TYPES = ['הליכון', 'אופניים', 'אליפטיקל', 'ריצה', 'מדרגות', 'חתירה', 'שחייה', 'אחר'];
-let cardioType = null;
-const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-function syncWhenChips() {
-  const v = $('#cDate').value, t = new Date();
-  document.querySelectorAll('#cardio [data-cday]').forEach(c => { const d = new Date(t); d.setDate(d.getDate() - +c.dataset.cday); c.setAttribute('aria-pressed', String(isoDay(d) === v)); });
-}
-function renderCardio() {
-  const list = sorted().filter(s => s.day === 'C');
-  if (!cardioType) cardioType = (list[0] && list[0].type) || CARDIO_TYPES[0];
-  const weekAgo = Date.now() - 7 * 864e5;
-  const week = list.filter(s => new Date(s.date).getTime() > weekAgo);
-  const weekMin = week.reduce((a, s) => a + (+s.min || 0), 0);
-  $('#cardio').innerHTML = `
-    <div class="card">
-      <h3>סוג</h3>
-      <div class="chips">${CARDIO_TYPES.map(t => `<button class="chip" data-ctype="${t}" aria-pressed="${t === cardioType}">${t}</button>`).join('')}</div>
-      <div class="cardio-fields">
-        <label>דקות<span class="field"><input id="cMin" inputmode="numeric" placeholder="30"></span></label>
-        <label>ק״מ<span class="field"><input id="cKm" inputmode="decimal" placeholder="—"></span></label>
-        <label>שיפוע %<span class="field"><input id="cInc" inputmode="decimal" placeholder="—"></span></label>
-      </div>
-      <h3>מתי</h3>
-      <div class="when"><button class="chip" data-cday="0" aria-pressed="true">היום</button><button class="chip" data-cday="1" aria-pressed="false">אתמול</button><input type="date" id="cDate" value="${isoDay(new Date())}" max="${isoDay(new Date())}" aria-label="תאריך"></div>
-    </div>
-    <button class="primary" id="saveCardio">שמירת אירובי</button>
-    <div class="card">
-      <div class="hist-row"><h3>השבוע</h3><span class="num">${week.length} פעמים · ${weekMin} דק׳</span></div>
-      ${list.length ? list.slice(0, 5).map(s => `<div class="hist-row"><span>${esc(s.type)} · ${fmtDate(s.date)}</span><span class="num d">${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></div>`).join('') : '<p class="empty">עוד לא נשמר אירובי.</p>'}
-    </div>`;
-}
-$('#cardio').addEventListener('click', e => {
-  const chip = e.target.closest('[data-ctype]');
-  if (chip) { cardioType = chip.dataset.ctype; document.querySelectorAll('#cardio .chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip))); return; }
-  const cday = e.target.closest('[data-cday]');
-  if (cday) { const d = new Date(); d.setDate(d.getDate() - +cday.dataset.cday); $('#cDate').value = isoDay(d); syncWhenChips(); return; }
-  if (e.target.id !== 'saveCardio') return;
-  const min = Math.round(+$('#cMin').value.replace(',', '.'));
-  const km = $('#cKm').value.replace(',', '.').trim(), inc = $('#cInc').value.replace(',', '.').trim();
-  if (!(min > 0)) { toast('כמה דקות עשית?'); $('#cMin').focus(); return; }
-  // A past day is stored at noon so it lands on that day in the calendar
-  const now = new Date(), picked = $('#cDate').value;
-  let when = now;
-  if (picked && picked !== isoDay(now)) { const [y, m, d] = picked.split('-').map(Number); when = new Date(y, m - 1, d, 12); }
-  if (when > now) { toast('אי אפשר לבחור תאריך עתידי'); return; }
-  const s = { id: 's' + now.getTime(), day: 'C', date: when.toISOString(), type: cardioType, min, km: +km > 0 ? km : '', inc: +inc > 0 ? inc : '' };
-  state.sessions.push(s);
-  touch(); saveSessionRemote(s);
-  renderCardio(); toast(`${cardioType} ${min} דק׳ נשמר` + (when !== now ? ` ל-${fmtDate(s.date)}` : ''));
-});
-$('#cardio').addEventListener('change', e => { if (e.target.id === 'cDate') syncWhenChips(); });
-
 function renderHistory() {
   const list = sorted();
   const weekAgo = Date.now() - 7 * 864e5;
@@ -697,9 +696,9 @@ function renderHistory() {
     if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></span></summary>
       <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
-    return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${WEEK[s.day] ? WEEK[s.day].name : esc(s.day)}</span> ${fmtDate(s.date)}</span><span class="d num">${[n ? n + ' סטים' : '', s.run ? 'ריצה' + (s.run.km ? ' ' + esc(s.run.km) + ' ק״מ' : '') : '', s.min ? s.min + ' דק׳' : ''].filter(Boolean).join(' · ')}</span></span></summary>
+    return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${WEEK[s.day] ? WEEK[s.day].name : esc(s.day)}</span> ${fmtDate(s.date)}</span><span class="d num">${[n ? n + ' סטים' : '', s.run ? (s.run.laps ? s.run.laps.length + '×400' : 'ריצה' + (s.run.km ? ' ' + esc(s.run.km) + ' ק״מ' : '')) : '', s.min ? s.min + ' דק׳' : ''].filter(Boolean).join(' · ')}</span></span></summary>
       <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(EX[id] ? EX[id].he : id)}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
-      ${s.run ? `<div class="hist-row"><span>${esc(s.run.name)}</span><span class="num d">${[s.run.km ? esc(s.run.km) + ' ק״מ' : '', s.run.min ? esc(s.run.min) + ' דק׳' : '', pace(s.run.km, s.run.min) ? pace(s.run.km, s.run.min) + ' לק״מ' : ''].filter(Boolean).join(' · ')}</span></div>` : ''}
+      ${s.run ? `<div class="hist-row"><span>${esc(s.run.name)}</span><span class="num d">${s.run.laps ? s.run.laps.map(esc).join(' · ') : [s.run.km ? esc(s.run.km) + ' ק״מ' : '', s.run.min ? esc(s.run.min) + ' דק׳' : '', pace(s.run.km, s.run.min) ? pace(s.run.km, s.run.min) + ' לק״מ' : ''].filter(Boolean).join(' · ')}</span></div>` : ''}
       <button class="link danger" data-delsession="${s.id}">מחיקת האימון</button></div></details>`;
   }).join('') : '<p class="empty">עוד לא נשמרו אימונים. סמן סטים או ריצה ביום האימון ולחץ "סיום".</p>'}</div>`;
 
@@ -746,7 +745,14 @@ W.addEventListener('input', e => {
   if (inp.dataset.run) {
     const d = draftFor(view);
     d.run[inp.dataset.run] = inp.value.replace(',', '.').trim();
-    $('#runPace').value = pace(d.run.km, d.run.min);
+    if (d.run.laps) refreshLaps(view); else $('#runPace').value = pace(d.run.km, d.run.min);
+    if (!d.start) d.start = new Date().toISOString();
+    saveDrafts(); return;
+  }
+  if (inp.dataset.lapt) {
+    const d = draftFor(view);
+    d.run.laps[+inp.dataset.lapt].t = inp.value.replace(',', '.').replace('.', ':').trim();
+    refreshLaps(view);
     if (!d.start) d.start = new Date().toISOString();
     saveDrafts(); return;
   }
@@ -764,6 +770,16 @@ W.addEventListener('change', e => {
 W.addEventListener('click', e => {
   const t = e.target;
   const d = DAYS.includes(view) ? draftFor(view) : null;
+  if (t.closest('[data-lapdone]')) {
+    const i = +t.closest('[data-lap]').dataset.lap;
+    d.run.laps[i].done = !d.run.laps[i].done;
+    if (!d.start) d.start = new Date().toISOString();
+    saveDrafts();
+    $('#runCard').outerHTML = runHTML(view);
+    updateProgress(view);
+    if (d.run.laps[i].done) startRest(REST_SEC);
+    return;
+  }
   if (t.closest('[data-rundone]')) {
     d.run.done = !d.run.done;
     if (!d.start) d.start = new Date().toISOString();
@@ -820,7 +836,9 @@ function finish(day) {
     const done = sets.filter(s => s.done).map(s => ({ w: s.w, r: s.r }));
     if (done.length) ex[id] = done;
   });
-  const run = d.run && d.run.done ? { name: WEEK[day].run.name, km: d.run.km, min: d.run.min } : null;
+  const run = !runDone(d.run) ? null : d.run.laps
+    ? { name: WEEK[day].run.name, target: d.run.target, laps: d.run.laps.filter(l => l.done).map(l => l.t) }
+    : { name: WEEK[day].run.name, km: d.run.km, min: d.run.min };
   if (!Object.keys(ex).length && !run) { toast('סמן לפחות סט אחד או את הריצה לפני סיום'); return; }
   const now = new Date();
   const min = d.start ? Math.max(1, Math.round((now - new Date(d.start)) / 60000)) : null;
