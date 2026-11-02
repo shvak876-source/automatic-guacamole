@@ -276,9 +276,8 @@ textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border
 // ---------- Program (from the A/B card: 4×/week, 60 min, warmup 5 min, 2 sets × 8-12, 90″ rest, 50-70%) ----------
 const IMG = 'img/';
 const EX = {
-  legpress:  { he: 'לחיצת רגליים במכונה', en: 'Leg Press', img: 'Leg_Press' },
-  legext:    { he: 'פשיטת ברכיים במכונה', en: 'Leg Extension', img: 'Leg_Extensions' },
-  legcurl:   { he: 'כפיפת ברכיים במכונה', en: 'Leg Curl', img: 'Seated_Leg_Curl' },
+  squat:     { he: 'סקוואט עם משקל', en: 'Barbell Squat', img: 'Barbell_Squat' },
+  lunge:     { he: 'לאנג׳ים', en: 'Lunges', img: 'Dumbbell_Lunges' },
   calves:    { he: 'תאומים', en: 'Calf Raise', img: 'Standing_Calf_Raises' },
   bbbench:   { he: 'לחיצת חזה במוט', en: 'Barbell Bench Press', img: 'Barbell_Bench_Press_-_Medium_Grip' },
   incbb:     { he: 'לחיצת חזה בשיפוע במוט', en: 'Incline Barbell Press', img: 'Barbell_Incline_Bench_Press_-_Medium_Grip' },
@@ -295,7 +294,7 @@ const EX = {
 const GROUPS = {
   A: [
     ['חזה', ['bbbench', 'incbb', 'cablefly']],
-    ['רגליים', ['legpress', 'legext', 'legcurl', 'calves']],
+    ['רגליים', ['squat', 'lunge', 'calves']],
     ['יד אחורית', ['pushdown', 'ohext']],
   ],
   B: [
