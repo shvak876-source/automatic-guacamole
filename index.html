@@ -72,7 +72,7 @@ header.top {
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-h1 { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: .9; margin: 0; letter-spacing: .5px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: .9; margin: 0; letter-spacing: .5px; }
 h1 b { color: var(--accent); }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .tab {
@@ -92,15 +92,15 @@ h1 b { color: var(--accent); }
 .meta span b { color: var(--ink); font-weight: 600; }
 .warm {
   display: flex; align-items: center; gap: 12px; background: var(--surface);
-  border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px;
 }
 .warm .t { flex: 1; min-width: 0; }
 .warm .t small { display: block; color: var(--muted); }
 
-.folder { display: grid; gap: 12px; }
+.folder { display: grid; gap: 10px; scroll-margin-top: 150px; }
 .folder-head {
   width: 100%; display: flex; align-items: center; gap: 12px; text-align: start;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px;
 }
 .folder-head .fname { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1; }
 .folder-head .fmeta { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
@@ -110,13 +110,13 @@ h1 b { color: var(--accent); }
 .folder.open .folder-head .arrow { transform: rotate(-135deg); margin-top: 4px; }
 .folder.done .folder-head { border-color: var(--done); background: var(--done-soft); }
 .folder.done .fcount { color: var(--done); font-weight: 600; }
-.folder-body { display: grid; gap: 12px; padding-inline-start: 10px; border-inline-start: 2px solid var(--line); }
+.folder-body { display: grid; gap: 10px; padding-inline-start: 10px; border-inline-start: 2px solid var(--line); }
 
 /* Exercise card */
 .ex { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .ex.complete { border-color: var(--done); }
-.ex-head { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 12px; align-items: start; }
-.pic { position: relative; width: 112px; aspect-ratio: 4/3; max-width: 100%; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid var(--line); }
+.ex-head { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 10px 10px 8px; align-items: center; }
+.pic { position: relative; width: 64px; aspect-ratio: 4/3; max-width: 100%; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid var(--line); }
 .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .5s; }
 .pic img.b { opacity: 0; }
 .pic.flip img.b { opacity: 1; }
@@ -124,7 +124,7 @@ h1 b { color: var(--accent); }
 .pic-btn.alt { inset-inline-start: auto; inset-inline-end: 4px; }
 .pic-btn {
   position: absolute; inset-inline-start: 4px; bottom: 4px; border: 0; border-radius: 6px;
-  background: rgba(20,22,26,.72); color: #fff; font-size: 11px; padding: 2px 6px;
+  background: rgba(20,22,26,.72); color: #fff; font-size: 9px; padding: 0 4px;
 }
 .ex-info { min-width: 0; display: grid; gap: 4px; }
 .ex-name { font-weight: 600; font-size: 16px; line-height: 1.3; display: flex; gap: 8px; align-items: start; }
@@ -140,19 +140,20 @@ h1 b { color: var(--accent); }
 .last b { color: var(--ink); font-weight: 600; }
 .up { font-size: 12.5px; color: var(--ink); background: var(--accent-soft); border-radius: 6px; padding: 2px 8px; justify-self: start; }
 
-.sets { border-top: 1px solid var(--line); padding: 8px 12px 12px; display: grid; gap: 6px; }
-.set-row { display: grid; grid-template-columns: 26px 1fr 1fr 44px; gap: 8px; align-items: center; }
+.sets { padding: 0 10px 10px; display: grid; gap: 6px; }
+.field[data-u]::after { content: attr(data-u); position: absolute; inset-inline-end: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); pointer-events: none; }
+.set-row { display: grid; grid-template-columns: 18px 1fr 1fr 48px; gap: 8px; align-items: center; }
 .set-row.hdr { font-size: 11px; color: var(--muted); letter-spacing: .3px; }
 .set-row .n { font-family: var(--font-num); color: var(--muted); font-size: 13px; text-align: center; }
 .field { position: relative; }
 .field input {
-  width: 100%; min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: 10px;
+  width: 100%; min-width: 0; height: 44px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--bg); padding: 0 10px; font-family: var(--font-num); font-size: 16px; text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .field input::placeholder { color: var(--muted); opacity: .7; }
 .done-btn {
-  height: 40px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface);
+  height: 44px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface);
   font-size: 18px; line-height: 1; color: var(--muted);
 }
 .set-row.on .done-btn { background: var(--done); border-color: var(--done); color: #fff; }
@@ -446,18 +447,29 @@ function picHTML(id) {
   const imgs = own
     ? `<img class="own" src="${esc(own)}" alt="${esc(e.he)}">`
     : `<img src="${IMG}${e.img}_0.jpg" alt="${esc(e.he)}" loading="lazy"><img class="b" src="${IMG}${e.img}_1.jpg" alt="" loading="lazy">`;
-  return `<div class="pic${own ? ' own-pic' : ''}">${imgs}<button class="pic-btn" data-photo="${id}" aria-label="החלפת תמונה">${own ? 'החלף' : 'תמונה'}</button>${own ? `<button class="pic-btn alt" data-photoreset="${id}">מקורית</button>` : ''}</div>`;
+  return `<div class="pic${own ? ' own-pic' : ''}">${imgs}<button class="pic-btn" data-photo="${id}" aria-label="החלפת תמונה">📷</button>${own ? `<button class="pic-btn alt" data-photoreset="${id}" aria-label="חזרה לתמונה המקורית">↺</button>` : ''}</div>`;
+}
+
+function groupDone(day, gi) { const d = state.drafts[day]; return PLAN[day][gi][1].every(id => d.ex[id].every(x => x.done)); }
+function setFolder(key, open) {
+  if (open) openGroups.add(key); else openGroups.delete(key);
+  const fh = document.querySelector(`[data-folder="${key}"]`); if (!fh) return;
+  const f = fh.parentElement;
+  f.classList.toggle('open', open);
+  fh.setAttribute('aria-expanded', String(open));
+  f.querySelector('.folder-body').hidden = !open;
 }
 
 function renderWorkout(day) {
   const d = draftFor(day);
+  if (!PLAN[day].some((_, gi) => openGroups.has(day + gi))) {
+    const gi = PLAN[day].findIndex((_, i) => !groupDone(day, i));
+    if (gi >= 0) openGroups.add(day + gi);
+  }
   let html = `
-    <div class="meta">
-      <span><b>2</b> סטים</span><span><b>8-12</b> חזרות</span><span><b>90″</b> מנוחה</span><span><b>50-70%</b> משקל</span><span><b>60</b> דק׳ לאימון</span>
-    </div>
     <label class="warm">
       <input type="checkbox" id="warmChk" ${d.warm ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--done)">
-      <span class="t"><b>חימום 5 דקות</b><small>הליכה / אופניים / אליפטיקל</small></span>
+      <span class="t"><b>חימום 5 דקות</b> <small style="display:inline">· הליכה / אופניים</small></span>
     </label>`;
   PLAN[day].forEach(([group, ids], gi) => {
     const key = day + gi, open = openGroups.has(key);
@@ -477,6 +489,9 @@ function renderWorkout(day) {
   updateProgress(day);
 }
 
+// Reps of set i last time (falls back to that session's last set)
+function lastReps(last, i) { if (!last) return ''; const p = last.sets[i] || last.sets[last.sets.length - 1]; return p && p.r ? String(p.r) : ''; }
+
 function exHTML(day, id) {
   const e = EX[id], sets = state.drafts[day].ex[id], last = lastFor(id);
   const complete = sets.length && sets.every(s => s.done);
@@ -484,14 +499,14 @@ function exHTML(day, id) {
   let upTxt = '';
   if (last) {
     const s = last.sets.map(x => `${x.w}×` + (x.r || '?')).join(' · ');
-    lastTxt = `<div class="last">פעם קודמת (${fmtDate(last.date)}): <b class="num">${esc(s)}</b></div>`;
+    lastTxt = `<div class="last">פעם קודמת: <b class="num">${esc(s)}</b></div>`;
     if (last.sets.length && last.sets.every(x => +x.r >= REP_TOP)) upTxt = `<div class="up">הגעת ל-${REP_TOP} חזרות בכל הסטים. אפשר להעלות משקל.</div>`;
   }
   const rows = sets.map((s, i) => `
     <div class="set-row${s.done ? ' on' : ''}" data-ex="${id}" data-i="${i}">
       <span class="n">${i + 1}</span>
-      <span class="field"><input id="w-${day}-${id}-${i}" inputmode="decimal" placeholder="ק״ג" value="${esc(s.w)}" data-k="w" aria-label="משקל סט ${i + 1}"></span>
-      <span class="field"><input id="r-${day}-${id}-${i}" inputmode="numeric" placeholder="8-12" value="${esc(s.r)}" data-k="r" aria-label="חזרות סט ${i + 1}"></span>
+      <span class="field" data-u="ק״ג"><input id="w-${day}-${id}-${i}" inputmode="decimal" placeholder="—" value="${esc(s.w)}" data-k="w" aria-label="משקל סט ${i + 1}"></span>
+      <span class="field" data-u="חזרות"><input id="r-${day}-${id}-${i}" inputmode="numeric" placeholder="${esc(lastReps(last, i) || '8-12')}" value="${esc(s.r)}" data-k="r" aria-label="חזרות סט ${i + 1}"></span>
       <button class="done-btn" data-done aria-label="סמן סט ${i + 1} כבוצע">✓</button>
     </div>`).join('');
   return `
@@ -500,18 +515,10 @@ function exHTML(day, id) {
       ${picHTML(id)}
       <div class="ex-info">
         <div class="ex-name"><span>${esc(e.he)}</span><span class="chk" aria-hidden="true">✓</span></div>
-        <div class="ex-en">${esc(e.en)}</div>
         ${lastTxt}${upTxt}
       </div>
     </div>
-    <div class="sets">
-      <div class="set-row hdr"><span>סט</span><span>משקל (ק״ג)</span><span>חזרות</span><span></span></div>
-      ${rows}
-      <div class="set-tools">
-        ${sets.length < SETS_MAX ? `<button class="link" data-add="${id}">+ סט נוסף</button>` : ''}
-        ${sets.length > 1 ? `<button class="link" data-del="${id}">הסר סט</button>` : ''}
-      </div>
-    </div>
+    <div class="sets">${rows}</div>
   </article>`;
 }
 
@@ -714,8 +721,9 @@ W.addEventListener('click', e => {
   const t = e.target;
   const d = view === 'A' || view === 'B' ? draftFor(view) : null;
   if (t.closest('[data-done]')) {
-    const row = t.closest('.set-row'), id = row.dataset.ex, set = d.ex[id][+row.dataset.i];
+    const row = t.closest('.set-row'), id = row.dataset.ex, i = +row.dataset.i, set = d.ex[id][i];
     set.done = !set.done;
+    if (set.done && !set.r) { const r = lastReps(lastFor(id), i); if (r) { set.r = r; row.querySelector('[data-k="r"]').value = r; } }
     if (!d.start) d.start = new Date().toISOString();
     row.classList.toggle('on', set.done);
     const card = $('#ex-' + id);
@@ -723,6 +731,15 @@ W.addEventListener('click', e => {
     updateProgress(view);
     saveDrafts();
     if (set.done) startRest(REST_SEC);
+    const gi = PLAN[view].findIndex(([, ids]) => ids.includes(id));
+    if (set.done && groupDone(view, gi)) {
+      const next = PLAN[view].findIndex((_, k) => k > gi && !groupDone(view, k));
+      setTimeout(() => {
+        setFolder(view + gi, false);
+        if (next >= 0) { setFolder(view + next, true); document.querySelector(`[data-group="${next}"]`).scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        else $('#finishBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
+    }
     return;
   }
   const add = t.closest('[data-add]'), del = t.closest('[data-del]');
@@ -736,14 +753,7 @@ W.addEventListener('click', e => {
     return;
   }
   const fh = t.closest('[data-folder]');
-  if (fh) {
-    const key = fh.dataset.folder, f = fh.parentElement, open = !openGroups.has(key);
-    if (open) openGroups.add(key); else openGroups.delete(key);
-    f.classList.toggle('open', open);
-    fh.setAttribute('aria-expanded', String(open));
-    f.querySelector('.folder-body').hidden = !open;
-    return;
-  }
+  if (fh) { setFolder(fh.dataset.folder, !openGroups.has(fh.dataset.folder)); return; }
   const ph = t.closest('[data-photo]');
   const pr = t.closest('[data-photoreset]');
   if (pr) { const id = pr.dataset.photoreset; delete state.photos[id]; lsWrite(); savePhotoRemote(id, null); render(); toast('חזרה לתמונה המקורית'); return; }
