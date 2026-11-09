@@ -33,12 +33,26 @@
   --done-soft: #0f2e1b;
   --both: #ff4d3d;
   --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --glow: 255,130,30;     /* rgb of the accent's shadow */
   --font-display: "Karantina", "Arial Narrow", system-ui, sans-serif;
   --font-body: "IBM Plex Sans Hebrew", "Arial Hebrew", system-ui, sans-serif;
   --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   --radius: 14px;
   color-scheme: dark;
 }
+/* Accent colours and a light mode, picked in settings */
+:root[data-accent="blue"]   { --accent: #38bdf8; --accent-2: #6366f1; --accent-ink: #03111c; --accent-soft: #0c2a3a; --glow: 80,140,255; }
+:root[data-accent="green"]  { --accent: #a3e635; --accent-2: #16a34a; --accent-ink: #0a1402; --accent-soft: #1e2e0a; --glow: 120,220,60; }
+:root[data-accent="red"]    { --accent: #ff6b5f; --accent-2: #e11d48; --accent-ink: #1a0507; --accent-soft: #3a1014; --glow: 240,60,70; }
+:root[data-accent="purple"] { --accent: #d08cff; --accent-2: #7c3aed; --accent-ink: #12041f; --accent-soft: #2a1440; --glow: 150,80,240; }
+:root[data-accent="gold"]   { --accent: #e0a92e; --accent-2: #c28a12; --accent-ink: #15130d; --accent-soft: #33290f; --glow: 200,150,40; }
+:root[data-mode="light"] {
+  --bg: #f3f4f6; --surface: #ffffff; --surface-2: #f8f8fa; --ink: #111318; --muted: #626a75; --line: #e1e3e8;
+  --done: #16a34a; --done-soft: #dcfce7; color-scheme: light;
+}
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch { width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; outline: 1px solid var(--line); }
+.swatch[aria-pressed="true"] { border-color: var(--ink); }
 /* One dark theme in every mode: the app is used in the gym, not at a desk */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; } }
 :root[data-theme="dark"] { color-scheme: dark; }
@@ -48,7 +62,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; color: var(--ink);
-  background: radial-gradient(120% 60% at 50% -10%, rgba(255,140,30,.13), transparent 60%) no-repeat, var(--bg);
+  background: radial-gradient(120% 60% at 50% -10%, rgba(var(--glow),.13), transparent 60%) no-repeat, var(--bg);
   background-attachment: fixed;
   font: 15px/1.5 var(--font-body);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -103,7 +117,7 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .folder-head .fmeta { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
 .folder-head .fcount { font-family: var(--font-num); font-size: 13px; color: var(--muted); }
 .folder-head .arrow { flex: none; width: 10px; height: 10px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .2s; margin-top: -4px; }
-.folder.open .folder-head { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 8px 24px -12px rgba(255,140,30,.5); }
+.folder.open .folder-head { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 8px 24px -12px rgba(var(--glow),.5); }
 .folder.open .folder-head .arrow { transform: rotate(-135deg); margin-top: 4px; }
 .folder.done .folder-head { border-color: var(--done); background: var(--done-soft); }
 .folder.done .fcount { color: var(--done); font-weight: 600; }
@@ -162,7 +176,7 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 
 .primary {
   width: 100%; border: 0; border-radius: var(--radius); background: var(--grad); color: var(--accent-ink);
-  box-shadow: 0 10px 28px -12px rgba(255,120,30,.7);
+  box-shadow: 0 10px 28px -12px rgba(var(--glow),.7);
   font-family: var(--font-display); font-weight: 700; font-size: 28px; padding: 10px; letter-spacing: .5px;
 }
 .ghost { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; font-weight: 500; }
@@ -173,7 +187,7 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
   padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   background: var(--grad); color: var(--accent-ink); display: flex; align-items: center; gap: 12px;
-  box-shadow: 0 -8px 24px -10px rgba(255,120,30,.6);
+  box-shadow: 0 -8px 24px -10px rgba(var(--glow),.6);
 }
 .rest .clock { font-family: var(--font-num); font-size: 28px; font-weight: 600; }
 .rest .lbl { flex: 1; font-size: 13px; opacity: .8; }
@@ -336,7 +350,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026';
+const APP_VERSION = '10.11.2026-2';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -382,7 +396,7 @@ async function cloudInit() {
     localOnly.forEach(saveSessionRemote);
     Object.entries(state.photos).forEach(([k, v]) => { if (!remote.photos[k]) savePhotoRemote(k, v); });
     state.photos = Object.assign({}, remote.photos, state.photos);
-    if (remote.settings && remote.settings.updated > (state.settings.updated || 0)) { state.settings = Object.assign({ off: {}, names: {}, custom: {} }, remote.settings); syncCustom(); }
+    if (remote.settings && remote.settings.updated > (state.settings.updated || 0)) { state.settings = Object.assign({ off: {}, names: {}, custom: {} }, remote.settings); syncCustom(); applyTheme(); }
     else if (state.settings.updated) saveSettingsRemote();
     // Workouts in progress: the newer side wins.
     if ((remote.updated || 0) > (state.updated || 0)) {
@@ -527,6 +541,9 @@ function renderWorkout(day) {
   updateProgress(day);
 }
 
+// Sunday 00:00 of the current week
+function weekStart0() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - d.getDay()); return d; }
+
 // Reps of set i last time (falls back to that session's last set)
 function lastReps(last, i) { if (!last) return ''; const p = last.sets[i] || last.sets[last.sets.length - 1]; return p && p.r ? String(p.r) : ''; }
 
@@ -631,8 +648,7 @@ function syncWhenChips() {
 function renderCardio() {
   const list = sorted().filter(s => s.day === 'C');
   if (!cardioType) cardioType = (list[0] && list[0].type) || CARDIO_TYPES[0];
-  const weekAgo = Date.now() - 7 * 864e5;
-  const week = list.filter(s => new Date(s.date).getTime() > weekAgo);
+  const week = list.filter(s => new Date(s.date) >= weekStart0());
   const weekMin = week.reduce((a, s) => a + (+s.min || 0), 0);
   $('#cardio').innerHTML = `
     <div class="card">
@@ -674,9 +690,23 @@ $('#cardio').addEventListener('click', e => {
 $('#cardio').addEventListener('change', e => { if (e.target.id === 'cDate') syncWhenChips(); });
 
 // ---------- Settings: switch exercises off/on, rename them, change their picture ----------
+const ACCENTS = [['orange', 'כתום', '#ffb020', '#ff6a1a'], ['red', 'אדום', '#ff6b5f', '#e11d48'], ['blue', 'כחול', '#38bdf8', '#6366f1'],
+  ['green', 'ירוק', '#a3e635', '#16a34a'], ['purple', 'סגול', '#d08cff', '#7c3aed'], ['gold', 'זהב', '#e0a92e', '#c28a12']];
+function applyTheme() {
+  const th = state.settings.theme || {}, r = document.documentElement;
+  if (th.accent && th.accent !== 'orange') r.dataset.accent = th.accent; else delete r.dataset.accent;
+  if (th.mode === 'light') r.dataset.mode = 'light'; else delete r.dataset.mode;
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = th.mode === 'light' ? '#f3f4f6' : '#0b0c0f';
+}
 function renderSettings() {
   const perm = 'Notification' in window ? Notification.permission : 'none';
-  let html = `<p class="note" style="margin:0">גרסה ${APP_VERSION}</p><div class="card"><h3>התראה בסוף מנוחה</h3>
+  const th = state.settings.theme || {};
+  let html = `<p class="note" style="margin:0">גרסה ${APP_VERSION}</p>
+    <div class="card"><h3>עיצוב</h3>
+      <div class="swatches">${ACCENTS.map(([k, name, a, b]) => `<button class="swatch" data-accent="${k}" aria-pressed="${(th.accent || 'orange') === k}" aria-label="${name}" title="${name}" style="background:linear-gradient(135deg,${a},${b})"></button>`).join('')}</div>
+      <div class="chips">${[['dark', 'כהה'], ['light', 'בהיר']].map(([k, n]) => `<button class="chip" data-mode="${k}" aria-pressed="${(th.mode || 'dark') === k}">${n}</button>`).join('')}</div>
+    </div>
+    <div class="card"><h3>התראה בסוף מנוחה</h3>
     <p class="note" style="margin:0">${perm === 'granted' ? 'פעיל: כשהמנוחה נגמרת תקבל התראה, צליל ורטט.' : perm === 'denied' ? 'ההתראות חסומות. אפשר להפעיל אותן בהגדרות הטלפון, תחת האתר או האפליקציה.' : perm === 'none' ? 'הדפדפן הזה לא תומך בהתראות. באייפון: הוסף את האתר למסך הבית ופתח אותו משם. בינתיים יש צליל ורטט.' : 'כשהמנוחה נגמרת תקבל התראה, גם אם האפליקציה ברקע.'}</p>
     ${perm === 'default' ? '<button class="ghost" id="askNotify">הפעלת התראות</button>' : ''}
     <button class="ghost" id="testNotify">בדיקה (5 שניות)</button></div>
@@ -697,6 +727,11 @@ function renderSettings() {
 }
 $('#settings').addEventListener('click', e => {
   const t = e.target;
+  const ac = t.closest('.swatch[data-accent]'), md = t.closest('.chip[data-mode]');
+  if (ac || md) {
+    state.settings.theme = Object.assign({}, state.settings.theme, ac ? { accent: ac.dataset.accent } : { mode: md.dataset.mode });
+    applyTheme(); saveSettings(); renderSettings(); return;
+  }
   if (t.id === 'askNotify') { askNotify(true); return; }
   if (t.id === 'testNotify') { askNotify(false); startRest(5); toast('בעוד 5 שניות'); return; }
   const ad = t.closest('[data-addex]');
@@ -746,10 +781,9 @@ let settingsTimer = null;
 
 function renderHistory() {
   const list = sorted();
-  const weekAgo = Date.now() - 7 * 864e5;
-  const thisWeek = list.filter(s => s.day !== 'C' && new Date(s.date).getTime() > weekAgo).length;
+  const thisWeek = list.filter(s => (s.day === 'A' || s.day === 'B') && new Date(s.date) >= weekStart0()).length;
   let html = `<div class="card">
-      <div class="hist-row"><h3>השבוע</h3><span class="num">${thisWeek}/4 אימונים</span></div>
+      <div class="hist-row"><h3>השבוע <small class="note">(מיום ראשון)</small></h3><span class="num">${thisWeek}/4 אימונים</span></div>
       <div class="bar"><i style="width:${Math.min(thisWeek / 4, 1) * 100}%"></i></div>
     </div>`;
   html += heatHTML(list);
@@ -1039,6 +1073,7 @@ try { localStorage.setItem('gymAB.test', '1'); localStorage.removeItem('gymAB.te
 const saved = lsRead();
 if (saved) state = { sessions: saved.sessions, drafts: saved.drafts || {}, photos: saved.photos || {}, updated: saved.updated || 0, settings: Object.assign({ off: {}, names: {}, custom: {}, updated: 0 }, saved.settings) };
 syncCustom();
+applyTheme();
 // One-time cleanup (Nov 2026): keep the sets of the latest A and latest B only, older workouts keep their
 // date for the calendar and streak, and two missed days (Thu 5.11 and Sun 8.11.2026) are marked as training days.
 if (!state.settings.migr1) {
