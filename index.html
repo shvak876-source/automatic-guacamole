@@ -661,10 +661,16 @@ function renderHistory() {
     if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></span></summary>
       <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
-    return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${n} סטים${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
+    return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${s.cleared ? 'משקלים אופסו' : n + ' סטים'}${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
       <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(EX[id] ? EX[id].he : id)}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
       <button class="link danger" data-delsession="${s.id}">מחיקת האימון</button></div></details>`;
   }).join('') : '<p class="empty">עוד לא נשמרו אימונים. סמן סטים באימון A או B ולחץ "סיום אימון".</p>'}</div>`;
+
+  html += `<div class="card"><details><summary>איפוס משקלים</summary>
+      <div style="display:grid;gap:8px;padding-top:8px">
+        <p class="note">מוחק את המשקלים והחזרות מכל האימונים שלפני השבוע הנוכחי (מיום ראשון). האימונים של השבוע נשארים כמו שהם, וכל ימי האימון נשארים מסומנים בלוח ובשבועות ברצף.</p>
+        <button class="ghost danger" id="clearWeights">איפוס משקלים ישנים</button>
+      </div></details></div>`;
 
   html += `<div class="card"><details><summary>גיבוי ושחזור</summary>
       <div style="display:grid;gap:8px;padding-top:8px">
@@ -793,6 +799,18 @@ $('#history').addEventListener('click', async e => {
     state.sessions = state.sessions.filter(s => s.id !== id);
     touch(); cloudWrite('s_' + id, () => cloud.col.doc('s_' + id).delete());
     render(); return;
+  }
+  // Old weights go, the training days stay: sessions keep their date but lose their sets
+  if (t.id === 'clearWeights') {
+    if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = 'לחץ שוב לאישור האיפוס'; return; }
+    const ws = new Date(); ws.setHours(0, 0, 0, 0); ws.setDate(ws.getDate() - ws.getDay());
+    const old = state.sessions.filter(s => s.day !== 'C' && new Date(s.date) < ws && Object.keys(s.ex || {}).length);
+    old.forEach(s => { s.ex = {}; s.cleared = true; saveSessionRemote(s); });
+    // Workouts not started yet would still carry the old weights
+    Object.keys(state.drafts).forEach(k => { const d = state.drafts[k]; if (!d || !Object.values(d.ex || {}).some(x => x.some(y => y.done))) delete state.drafts[k]; });
+    touch(); saveDraftsRemote();
+    render(); toast(`אופסו המשקלים מ-${old.length} אימונים`);
+    return;
   }
   if (t.id === 'copyBackup') {
     const txt = JSON.stringify({ sessions: state.sessions });
