@@ -431,7 +431,7 @@ function lastFor(exId) {
   for (const s of sorted()) if (s.ex && s.ex[exId] && s.ex[exId].length) return { date: s.date, sets: s.ex[exId] };
   return null;
 }
-function nextDay() { const l = sorted().find(s => s.day !== 'C'); return l && l.day === 'A' ? 'B' : 'A'; }
+function nextDay() { const l = sorted().find(s => s.day === 'A' || s.day === 'B'); return l && l.day === 'A' ? 'B' : 'A'; }
 
 function draftFor(day) {
   let d = state.drafts[day];
@@ -580,7 +580,7 @@ function spark(points) {
 }
 
 // ---------- Training days calendar: one cell per day, a column per week, Jan → Dec ----------
-// Yellow = weights or cardio that day, red = both.
+// Every training day (weights, cardio or a marked day) is one colour.
 const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 const HE_MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
 function heatYear(year, days, todayKey) {
@@ -597,7 +597,7 @@ function heatYear(year, days, todayKey) {
 }
 function heatHTML(list) {
   const days = new Map();  // dayKey → 1 weights, 2 cardio, 3 both
-  list.forEach(s => { const k = dayKey(new Date(s.date)); days.set(k, (days.get(k) || 0) | (s.day === 'C' ? 2 : 1)); });
+  list.forEach(s => { const k = dayKey(new Date(s.date)); days.set(k, 1); });
   const now = new Date(), todayKey = dayKey(now), thisYear = now.getFullYear();
   const oldest = list.length ? new Date(list[list.length - 1].date) : now;
   const inYear = [...days.keys()].filter(k => k.startsWith(thisYear + '-')).length;
@@ -611,7 +611,7 @@ function heatHTML(list) {
   for (let y = thisYear; y >= oldest.getFullYear(); y--) body += heatYear(y, days, todayKey);
   return `<div class="card"><h3>ימי אימון</h3>
     <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
-    <div class="heat-legend"><span><i></i>אימון או אירובי</span><span><i class="both"></i>אימון + אירובי</span></div>
+    <div class="heat-legend"><span><i></i>יום אימון</span></div>
     ${body}</div>`;
 }
 
@@ -765,6 +765,8 @@ function renderHistory() {
     if (s.day === 'C') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge c">אירובי</span> ${fmtDate(s.date)}</span><span class="d num">${esc(s.type || '')} · ${s.min} דק׳${s.km ? ' · ' + esc(s.km) + ' ק״מ' : ''}${s.inc ? ' · שיפוע ' + esc(s.inc) + '%' : ''}</span></span></summary>
       <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     const n = Object.entries(s.ex || {}).reduce((a, [id, x]) => a + (EX[id] ? x.length : 0), 0);
+    if (s.day === 'M') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">✓</span> ${fmtDate(s.date)}</span><span class="d num">יום אימון</span></span></summary>
+      <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${s.cleared ? 'משקלים אופסו' : n + ' סטים'}${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
       <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(exName(id))}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
       <button class="link danger" data-delsession="${s.id}">מחיקת האימון</button></div></details>`;
@@ -1004,6 +1006,22 @@ try { localStorage.setItem('gymAB.test', '1'); localStorage.removeItem('gymAB.te
 const saved = lsRead();
 if (saved) state = { sessions: saved.sessions, drafts: saved.drafts || {}, photos: saved.photos || {}, updated: saved.updated || 0, settings: Object.assign({ off: {}, names: {}, custom: {}, updated: 0 }, saved.settings) };
 syncCustom();
+// One-time cleanup (Nov 2026): keep the sets of the latest A and latest B only, older workouts keep their
+// date for the calendar and streak, and two missed days (Thu 5.11 and Sun 8.11.2026) are marked as training days.
+if (!state.settings.migr1) {
+  const keep = new Set(['A', 'B'].map(d => (sorted().find(x => x.day === d) || {}).id));
+  state.sessions.forEach(x => {
+    if ((x.day === 'A' || x.day === 'B') && !keep.has(x.id) && Object.keys(x.ex || {}).length) { x.ex = {}; x.cleared = true; saveSessionRemote(x); }
+  });
+  [[2026, 10, 5], [2026, 10, 8]].forEach(([y, m, d]) => {
+    const k = y + '-' + (m + 1) + '-' + d;
+    if (state.sessions.some(x => { const t = new Date(x.date); return t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate() === k; })) return;
+    const x = { id: 'm' + y + (m + 1) + d, day: 'M', date: new Date(y, m, d, 12).toISOString(), ex: {} };
+    state.sessions.push(x); saveSessionRemote(x);
+  });
+  Object.keys(state.drafts).forEach(k => { const dr = state.drafts[k]; if (!dr || !Object.values(dr.ex || {}).some(a => a.some(z => z.done))) delete state.drafts[k]; });
+  state.settings.migr1 = true; touch();
+}
 // Drafts started under an older set count keep at most SETS_MAX sets
 Object.values(state.drafts).forEach(d => d && d.ex && Object.values(d.ex).forEach(sets => sets.splice(SETS_MAX)));
 render();
