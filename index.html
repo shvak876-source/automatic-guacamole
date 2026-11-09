@@ -224,6 +224,16 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .set-ex input[type=text] { width: 100%; min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 0 10px; }
 .save-nag { width: 100%; border: 0; border-radius: var(--radius); padding: 12px 14px; background: var(--both); color: #fff; font-weight: 500; text-align: start; }
 .save-nag b { text-decoration: underline; }
+.hfold { border-top: 1px solid var(--line); }
+.hfold:first-of-type { border-top: 0; }
+.hfold summary { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; cursor: pointer; list-style: none; }
+.hfold summary::-webkit-details-marker { display: none; }
+.hfold summary::after { content: "▾"; margin-inline-start: auto; color: var(--muted); }
+.hfold[open] summary::after { content: "▴"; }
+.hfold .fname { font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1; }
+.hfold .d { color: var(--muted); font-size: 13px; }
+.hfold .prog:first-of-type { border-top: 0; }
+.hgroup { font-size: 12px; font-weight: 600; color: var(--accent); padding-top: 4px; }
 .add-ex { justify-self: start; border-style: dashed; color: var(--accent); }
 .set-ex .sub { font-size: 11px; color: var(--muted); padding-top: 2px; }
 .switch { position: relative; width: 48px; height: 28px; border-radius: 999px; border: 0; background: var(--line); justify-self: end; }
@@ -341,6 +351,14 @@ const allIn = (day, group, ids) => [...ids, ...customIn(day, group)];
 function plan(day) {
   return PLAN[day].map(([g, ids]) => [g, allIn(day, g, ids).filter(id => !state.settings.off[id])]).filter(([, ids]) => ids.length);
 }
+// One set as "12 ח׳, 40 ק״ג" (ח׳ = repetitions, ק״ג = kilograms)
+const fmtSet = x => [x.r ? x.r + ' ח׳' : '', x.w ? x.w + ' ק״ג' : ''].filter(Boolean).join(', ') || '—';
+// Muscle group of an exercise as laid out in the plan (custom ones included)
+function groupOf(id) {
+  for (const day of ['A', 'B']) for (const [g, ids] of PLAN[day]) if (allIn(day, g, ids).includes(id)) return g;
+  return 'אחר';
+}
+const GROUP_ORDER = () => [...new Set(['A', 'B'].flatMap(d => PLAN[d].map(([g]) => g))), 'אחר'];
 const exName = id => (state.settings.names[id] || '').trim() || (EX[id] ? EX[id].he : 'תרגיל שנמחק');
 const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 
@@ -350,7 +368,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-2';
+const APP_VERSION = '10.11.2026-3';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -535,7 +553,12 @@ function renderWorkout(day) {
       <div class="folder-body"${open ? '' : ' hidden'}>${ids.map(id => exHTML(day, id)).join('')}</div>
     </section>`;
   });
-  html += `<button class="primary" id="finishBtn">סיום אימון ${day}</button>
+  const today = isoDay(new Date()), wd = d.date || today, yd = new Date(); yd.setDate(yd.getDate() - 1);
+  html += `<div class="when"><span class="note">תאריך האימון:</span>
+      <button class="chip" data-wday="${today}" aria-pressed="${wd === today}">היום</button>
+      <button class="chip" data-wday="${isoDay(yd)}" aria-pressed="${wd === isoDay(yd)}">אתמול</button>
+      <input type="date" id="wDate" value="${wd}" max="${today}" aria-label="תאריך האימון"></div>`;
+  html += `<button class="primary" id="finishBtn">סיום אימון ${day}${wd !== today ? ' · ' + fmtDate(new Date(wd + 'T12:00').toISOString()) : ''}</button>
     <div class="row"><button class="link" id="resetDay">איפוס האימון הנוכחי</button></div>`;
   $('#workout').innerHTML = html;
   updateProgress(day);
@@ -553,7 +576,7 @@ function exHTML(day, id) {
   let lastTxt = '';
   let upTxt = '';
   if (last) {
-    const s = last.sets.map(x => `${x.w}×` + (x.r || '?')).join(' · ');
+    const s = last.sets.map(fmtSet).join(' · ');
     lastTxt = `<div class="last">פעם קודמת: <b class="num">${esc(s)}</b></div>`;
     if (last.sets.length && last.sets.every(x => +x.r >= REP_TOP)) upTxt = `<div class="up">הגעת ל-${REP_TOP} חזרות בכל הסטים. אפשר להעלות משקל.</div>`;
   }
@@ -561,7 +584,7 @@ function exHTML(day, id) {
     <div class="set-row${s.done ? ' on' : ''}" data-ex="${id}" data-i="${i}">
       <span class="n">${i + 1}</span>
       <span class="field" data-u="ק״ג"><input id="w-${day}-${id}-${i}" inputmode="decimal" placeholder="—" value="${esc(s.w)}" data-k="w" aria-label="משקל סט ${i + 1}"></span>
-      <span class="field" data-u="חזרות"><input id="r-${day}-${id}-${i}" inputmode="numeric" placeholder="${esc(lastReps(last, i) || '8-12')}" value="${esc(s.r)}" data-k="r" aria-label="חזרות סט ${i + 1}"></span>
+      <span class="field" data-u="ח׳"><input id="r-${day}-${id}-${i}" inputmode="numeric" placeholder="${esc(lastReps(last, i) || '8-12')}" value="${esc(s.r)}" data-k="r" aria-label="חזרות סט ${i + 1}"></span>
       <button class="done-btn" data-done aria-label="סמן סט ${i + 1} כבוצע">✓</button>
     </div>`).join('');
   return `
@@ -795,9 +818,13 @@ function renderHistory() {
       .filter(v => v != null && v > 0);
     return { id, pts };
   }).filter(r => r.pts.length);
-  html += `<div class="card"><h3>התקדמות במשקל</h3>${rows.length ? rows.map(r => {
+  const progRow = r => {
     const first = r.pts[0], now = r.pts[r.pts.length - 1], diff = now - first;
     return `<div class="prog"><span class="nm">${esc(exName(r.id))}</span><span class="num">${now} ק״ג${diff ? ` <small style="color:var(--done)">${diff > 0 ? '+' : ''}${diff}</small>` : ''}</span>${spark(r.pts)}</div>`;
+  };
+  html += `<div class="card"><h3>התקדמות במשקל</h3>${rows.length ? GROUP_ORDER().map(g => {
+    const rs = rows.filter(r => groupOf(r.id) === g); if (!rs.length) return '';
+    return `<details class="hfold"><summary><span class="fname">${esc(g)}</span><span class="d">${rs.length} תרגילים</span></summary>${rs.map(progRow).join('')}</details>`;
   }).join('') : '<p class="empty">אחרי האימון הראשון יופיע כאן המשקל הגבוה בכל תרגיל, והגרף יתמלא מאימון לאימון.</p>'}</div>`;
 
   html += `<div class="card"><h3>אימונים שהושלמו</h3>${list.length ? list.map(s => {
@@ -807,7 +834,10 @@ function renderHistory() {
     if (s.day === 'M') return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">✓</span> ${fmtDate(s.date)}</span><span class="d num">יום אימון</span></span></summary>
       <div style="padding-top:8px"><button class="link danger" data-delsession="${s.id}">מחיקה</button></div></details>`;
     return `<details><summary><span class="hist-row" style="display:inline-flex;width:calc(100% - 20px)"><span><span class="badge">${s.day}</span> ${fmtDate(s.date)}</span><span class="d num">${s.cleared ? 'משקלים אופסו' : n + ' סטים'}${s.min ? ' · ' + s.min + ' דק׳' : ''}</span></span></summary>
-      <div style="padding-top:8px;display:grid;gap:4px">${Object.entries(s.ex || {}).filter(([id]) => EX[id]).map(([id, sets]) => `<div class="hist-row"><span>${esc(exName(id))}</span><span class="num d">${sets.map(x => (x.w ? x.w + '×' : '') + (x.r || '?')).join(' · ')}</span></div>`).join('')}
+      <div style="padding-top:8px;display:grid;gap:4px">${GROUP_ORDER().map(g => {
+        const es = Object.entries(s.ex || {}).filter(([id]) => EX[id] && groupOf(id) === g); if (!es.length) return '';
+        return `<div class="hgroup">${esc(g)}</div>` + es.map(([id, sets]) => `<div class="hist-row"><span>${esc(exName(id))}</span><span class="num d">${sets.map(fmtSet).join(' · ')}</span></div>`).join('');
+      }).join('')}
       <button class="link danger" data-delsession="${s.id}">מחיקת האימון</button></div></details>`;
   }).join('') : '<p class="empty">עוד לא נשמרו אימונים. סמן סטים באימון A או B ולחץ "סיום אימון".</p>'}</div>`;
 
@@ -934,6 +964,11 @@ W.addEventListener('input', e => {
   saveDrafts();
 });
 W.addEventListener('change', e => {
+  if (e.target.id === 'wDate') {
+    const d = draftFor(view), v = e.target.value;
+    if (!v || v > isoDay(new Date())) { toast('אי אפשר לבחור תאריך עתידי'); renderWorkout(view); return; }
+    d.date = v === isoDay(new Date()) ? null : v; saveDrafts(); renderWorkout(view); return;
+  }
   if (e.target.id !== 'warmChk') return;
   const d = draftFor(view); d.warm = e.target.checked; if (!d.start) d.start = new Date().toISOString(); saveDrafts();
 });
@@ -978,6 +1013,8 @@ W.addEventListener('click', e => {
   const pr = t.closest('[data-photoreset]');
   if (pr) { const id = pr.dataset.photoreset; delete state.photos[id]; lsWrite(); savePhotoRemote(id, null); render(); toast('חזרה לתמונה המקורית'); return; }
   if (ph) { photoTarget = ph.dataset.photo; $('#photoInput').value = ''; $('#photoInput').click(); return; }
+  const wday = t.closest('[data-wday]');
+  if (wday) { d.date = wday.dataset.wday === isoDay(new Date()) ? null : wday.dataset.wday; saveDrafts(); renderWorkout(view); return; }
   if (t.id === 'finishBtn' || t.closest('#nagSave')) return finish(view);
   if (t.id === 'resetDay') {
     if (t.dataset.armed) { delete state.drafts[view]; saveDrafts(); render(); toast('האימון אופס'); }
@@ -993,8 +1030,11 @@ function finish(day) {
   });
   if (!Object.keys(ex).length) { toast('סמן לפחות סט אחד לפני סיום'); return; }
   const now = new Date();
-  const min = d.start ? Math.max(1, Math.round((now - new Date(d.start)) / 60000)) : null;
-  const s = { id: 's' + now.getTime(), day, date: now.toISOString(), min: min && min < 240 ? min : null, ex };
+  // A workout logged for an earlier day is stored at noon of that day, without a duration
+  const past = d.date && d.date < isoDay(now);
+  const when = past ? new Date(d.date + 'T12:00') : now;
+  const min = !past && d.start ? Math.max(1, Math.round((now - new Date(d.start)) / 60000)) : null;
+  const s = { id: 's' + now.getTime(), day, date: when.toISOString(), min: min && min < 240 ? min : null, ex };
   state.sessions.push(s);
   delete state.drafts[day];
   touch(); saveSessionRemote(s); saveDraftsRemote();
