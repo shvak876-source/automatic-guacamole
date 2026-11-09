@@ -788,7 +788,7 @@ function renderHistory() {
 // ---------- Rest timer ----------
 let restEnd = 0, restTick = null;
 let restNotified = false, audio = null, swReg = null;
-if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.claude) {
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.claude) {
   navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
 }
 // Asked once, from a tap (the first ✓ or the settings button), because browsers only allow it then
