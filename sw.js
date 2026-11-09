@@ -3,7 +3,7 @@
 //   last copy in the cache; pictures, fonts and icons come from the cache first.
 // - the rest-timer notification: the page shows it through this registration and a tap on it
 //   brings the app back.
-const CACHE = 'gym-v1';
+const CACHE = 'gym-v2';
 // The A/B log and its pictures are stored up front, so it works offline even before every folder was opened
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png',
   './img/Butterfly_0.jpg', './img/Butterfly_1.jpg', './img/Dumbbell_Bench_Press_0.jpg',
@@ -34,7 +34,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.webmanifest');
   if (isPage) {
-    e.respondWith(fetch(req).then(res => {
+    // no-store: skip the browser's own HTTP cache, so an update is seen on the first load online
+    e.respondWith(fetch(req, { cache: 'no-store' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./'))));

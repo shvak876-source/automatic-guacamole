@@ -336,6 +336,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
+const APP_VERSION = '10.11.2026';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -506,7 +507,7 @@ function renderWorkout(day) {
   html += `
     <label class="warm">
       <input type="checkbox" id="warmChk" ${d.warm ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--done)">
-      <span class="t"><b>חימום 5 דקות</b> <small style="display:inline">· הליכה / אופניים</small></span>
+      <span class="t"><b>חימום</b></span>
     </label>`;
   plan(day).forEach(([group, ids], gi) => {
     const key = day + gi, open = openGroups.has(key);
@@ -675,7 +676,7 @@ $('#cardio').addEventListener('change', e => { if (e.target.id === 'cDate') sync
 // ---------- Settings: switch exercises off/on, rename them, change their picture ----------
 function renderSettings() {
   const perm = 'Notification' in window ? Notification.permission : 'none';
-  let html = `<div class="card"><h3>התראה בסוף מנוחה</h3>
+  let html = `<p class="note" style="margin:0">גרסה ${APP_VERSION}</p><div class="card"><h3>התראה בסוף מנוחה</h3>
     <p class="note" style="margin:0">${perm === 'granted' ? 'פעיל: כשהמנוחה נגמרת תקבל התראה, צליל ורטט.' : perm === 'denied' ? 'ההתראות חסומות. אפשר להפעיל אותן בהגדרות הטלפון, תחת האתר או האפליקציה.' : perm === 'none' ? 'הדפדפן הזה לא תומך בהתראות. באייפון: הוסף את האתר למסך הבית ופתח אותו משם. בינתיים יש צליל ורטט.' : 'כשהמנוחה נגמרת תקבל התראה, גם אם האפליקציה ברקע.'}</p>
     ${perm === 'default' ? '<button class="ghost" id="askNotify">הפעלת התראות</button>' : ''}
     <button class="ghost" id="testNotify">בדיקה (5 שניות)</button></div>
@@ -795,7 +796,10 @@ function renderHistory() {
 let restEnd = 0, restTick = null;
 let restNotified = false, audio = null, swReg = null;
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.claude) {
-  navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+  // A new version takes over as soon as it is installed; reload once so the screen shows it
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !window.__reloaded) { window.__reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => { swReg = r; r.update().catch(() => {}); }).catch(() => {});
 }
 // Asked once, from a tap (the first ✓ or the settings button), because browsers only allow it then
 function askNotify(fromButton) {
