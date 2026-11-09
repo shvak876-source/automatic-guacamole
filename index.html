@@ -149,8 +149,11 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .ex-en { font-size: 12px; color: var(--muted); direction: ltr; text-align: right; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { font-size: 12px; background: var(--bg); border-radius: 6px; padding: 1px 7px; color: var(--muted); }
-.last { font-size: 12.5px; color: var(--muted); }
-.last b { color: var(--ink); font-weight: 600; }
+.last { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.prev-lbl { font-size: 11px; color: var(--muted); }
+.prev { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+.prev b { font-family: var(--font-num); font-size: 13px; font-weight: 600; color: var(--ink); }
+.prev i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); align-self: center; margin-inline: 3px; }
 .up { font-size: 12.5px; color: var(--ink); background: var(--accent-soft); border-radius: 6px; padding: 2px 8px; justify-self: start; }
 
 .sets { padding: 0 10px 10px; display: grid; gap: 6px; }
@@ -368,7 +371,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-4';
+const APP_VERSION = '10.11.2026-5';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -576,8 +579,9 @@ function exHTML(day, id) {
   let lastTxt = '';
   let upTxt = '';
   if (last) {
-    const s = last.sets.map(fmtSet).join(' · ');
-    lastTxt = `<div class="last">פעם קודמת: <b class="num">${esc(s)}</b></div>`;
+    // Last time as one small pill per set: "9 ח׳ · 39 ק״ג"
+    const pill = x => `<span class="prev">${x.r ? `<b>${esc(x.r)}</b>ח׳` : ''}${x.r && x.w ? '<i></i>' : ''}${x.w ? `<b>${esc(x.w)}</b>ק״ג` : ''}${!x.r && !x.w ? '—' : ''}</span>`;
+    lastTxt = `<div class="last"><span class="prev-lbl">פעם קודמת</span>${last.sets.map(pill).join('')}</div>`;
     if (last.sets.length && last.sets.every(x => +x.r >= REP_TOP)) upTxt = `<div class="up">הגעת ל-${REP_TOP} חזרות בכל הסטים. אפשר להעלות משקל.</div>`;
   }
   const rows = sets.map((s, i) => `
