@@ -174,7 +174,8 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 }
 .set-row.on .done-btn { background: var(--done); border-color: var(--done); color: #04120a; box-shadow: 0 4px 14px -6px var(--done); }
 .set-row.on input { background: var(--done-soft); border-color: transparent; }
-.set-tools { display: flex; gap: 8px; justify-content: flex-start; }
+.set-tools { display: flex; gap: 6px; justify-content: flex-end; }
+.mini { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 2px 12px; font-size: 13px; }
 .link { background: none; border: 0; color: var(--muted); font-size: 13px; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
 
 .primary {
@@ -253,6 +254,14 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .prog { display: grid; grid-template-columns: 1fr auto 96px; gap: 10px; align-items: center; padding-block: 6px; border-top: 1px solid var(--line); }
 .prog:first-of-type { border-top: 0; }
 .prog .nm { min-width: 0; font-size: 14px; }
+.prog-d { border-top: 1px solid var(--line); }
+.prog-d:first-of-type { border-top: 0; }
+.prog-d > summary { list-style: none; cursor: pointer; border-top: 0; }
+.prog-d > summary::-webkit-details-marker { display: none; }
+.prog-d[open] > summary .nm { color: var(--accent); font-weight: 600; }
+svg.big { display: block; width: 100%; height: auto; margin: 2px 0 10px; direction: ltr; overflow: visible; }
+svg.big .v { font: 600 11px var(--font-num); fill: var(--ink); }
+svg.big .t { font: 10px var(--font-num); fill: var(--muted); }
 .prog svg { width: 96px; height: 28px; overflow: visible; }
 .empty { color: var(--muted); font-size: 14px; }
 details summary { cursor: pointer; font-weight: 600; }
@@ -363,7 +372,7 @@ function groupOf(id) {
 }
 const GROUP_ORDER = () => [...new Set(['A', 'B'].flatMap(d => PLAN[d].map(([g]) => g))), 'אחר'];
 const exName = id => (state.settings.names[id] || '').trim() || (EX[id] ? EX[id].he : 'תרגיל שנמחק');
-const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
+const SETS_DEFAULT = 2, SETS_MAX = 6, REP_TOP = 12, REST_SEC = 90;
 
 // ---------- Storage: localStorage always, plus the artifact's private db when it is available ----------
 // Cloud layout (one flat per-viewer collection data/users/<uid>):
@@ -371,7 +380,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-5';
+const APP_VERSION = '10.11.2026-6';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -600,7 +609,12 @@ function exHTML(day, id) {
         ${lastTxt}${upTxt}
       </div>
     </div>
-    <div class="sets">${rows}</div>
+    <div class="sets">${rows}
+      <div class="set-tools">
+        ${sets.length > 1 ? `<button class="mini" data-del="${id}">− סט</button>` : ''}
+        ${sets.length < SETS_MAX ? `<button class="mini" data-add="${id}">+ סט</button>` : ''}
+      </div>
+    </div>
   </article>`;
 }
 
@@ -617,6 +631,27 @@ function updateProgress(day) {
     f.querySelector('.fcount').textContent = n === t ? '✓ הושלם' : `${n}/${t}`;
     f.classList.toggle('done', n === t);
   });
+}
+
+// Full chart: top weight per workout, with the weight on each point and dates along the bottom
+function bigChart(pts) {
+  if (pts.length < 2) return '<p class="empty" style="margin:6px 0 10px">הגרף יופיע אחרי שני אימונים עם משקל בתרגיל הזה.</p>';
+  const W = 320, H = 150, L = 8, R = 8, T = 20, B = 26;
+  const ws = pts.map(p => p.w), min = Math.min(...ws), max = Math.max(...ws), span = max - min || 1;
+  const x = i => L + i / (pts.length - 1) * (W - L - R);
+  const y = w => T + (1 - (w - min) / span) * (H - T - B);
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.w).toFixed(1)}`).join(' ');
+  const area = `${x(0)},${H - B} ${line} ${x(pts.length - 1)},${H - B}`;
+  const step = Math.ceil(pts.length / 6);  // at most ~6 labels so they don't collide
+  const lbl = (i) => i % step === 0 || i === pts.length - 1;
+  const dl = d => { const t = new Date(d); return t.getDate() + '.' + (t.getMonth() + 1); };
+  return `<svg class="big" viewBox="0 0 ${W} ${H}" role="img" aria-label="גרף משקל">
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="var(--line)"/>
+    <polygon points="${area}" fill="url(#ga)"/>
+    <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.w)}" r="3.5" fill="var(--accent)"/>${lbl(i) ? `<text x="${x(i)}" y="${y(p.w) - 8}" text-anchor="middle" class="v">${p.w}</text><text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="t">${dl(p.d)}</text>` : ''}`).join('')}
+  </svg>`;
 }
 
 function spark(points) {
@@ -819,13 +854,13 @@ function renderHistory() {
   // Progress per exercise: top weight per session, oldest → newest
   const rows = Object.keys(EX).map(id => {
     const pts = list.slice().reverse()
-      .map(s => s.ex && s.ex[id] ? Math.max(...s.ex[id].map(x => +x.w || 0)) : null)
-      .filter(v => v != null && v > 0);
-    return { id, pts };
+      .map(s => s.ex && s.ex[id] ? { d: s.date, w: Math.max(...s.ex[id].map(x => +x.w || 0)) } : null)
+      .filter(v => v && v.w > 0);
+    return { id, pts: pts.map(p => p.w), dated: pts };
   }).filter(r => r.pts.length);
   const progRow = r => {
     const first = r.pts[0], now = r.pts[r.pts.length - 1], diff = now - first;
-    return `<div class="prog"><span class="nm">${esc(exName(r.id))}</span><span class="num">${now} ק״ג${diff ? ` <small style="color:var(--done)">${diff > 0 ? '+' : ''}${diff}</small>` : ''}</span>${spark(r.pts)}</div>`;
+    return `<details class="prog-d"><summary class="prog"><span class="nm">${esc(exName(r.id))}</span><span class="num">${now} ק״ג${diff ? ` <small style="color:var(--done)">${diff > 0 ? '+' : ''}${diff}</small>` : ''}</span>${spark(r.pts)}</summary>${bigChart(r.dated)}</details>`;
   };
   html += `<div class="card"><h3>התקדמות במשקל</h3>${rows.length ? GROUP_ORDER().map(g => {
     const rs = rows.filter(r => groupOf(r.id) === g); if (!rs.length) return '';
