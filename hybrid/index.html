@@ -914,5 +914,53 @@ render();
 cloudInit();
 })();
 </script>
+<style>
+.kalori-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding: 9px 14px; border-radius: 14px;
+  background: var(--accent-soft); color: var(--ink); text-decoration: none; font-size: 14px; }
+.kalori-chip b { font-weight: 700; }
+.kalori-chip .k-go { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+<script>
+/* Kalori: today's calories left and protein from the Kalori app.
+   Both apps are on shvak876-source.github.io, so they share localStorage. Read-only. */
+(function () {
+  'use strict';
+  var URL = 'https://shvak876-source.github.io/Kalori-/';
+  var brand = document.querySelector('header.top .brand');
+  if (!brand) return;
+  var chip = document.createElement('a');
+  chip.className = 'kalori-chip';
+  chip.href = URL;
+  brand.insertAdjacentElement('afterend', chip);
+
+  function dayKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function fmt(n) { return Math.round(n).toLocaleString('he-IL'); }
+  function goals(S) {
+    var p = S.profile, o = S.override || {};
+    var bmr = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.sex === 'f' ? -161 : 5);
+    var tdee = Math.round(Math.round(bmr) * p.activity);
+    var kcal = p.goal === 'lose' ? tdee - p.deficit : p.goal === 'gain' ? tdee + 300 : tdee;
+    kcal = Math.round(kcal / 5) * 5;
+    var protein = Math.round(p.weight * (p.goal === 'gain' ? 1.8 : 1.6));
+    return { kcal: o.kcal || kcal, protein: o.protein || protein };
+  }
+  function draw() {
+    var S = null;
+    try { S = JSON.parse(localStorage.getItem('kalori.v1')); } catch (e) {}
+    if (!S || !S.profile) { chip.innerHTML = '<span>🍽 <b>קלורי</b> · מעקב קלוריות וחלבון</span><span class="k-go">פתיחה ←</span>'; return; }
+    var g = goals(S), kc = 0, pr = 0;
+    (S.log && S.log[dayKey(new Date())] || []).forEach(function (e) {
+      var f = e.mode === 'g' ? e.qty / 100 : e.qty;
+      kc += (e.kcal || 0) * f; pr += (e.protein || 0) * f;
+    });
+    var left = g.kcal - kc;
+    chip.innerHTML = '<span>🍽 ' + (left >= 0 ? 'נשארו <b>' + fmt(left) + '</b> קק״ל' : '<b>' + fmt(-left) + '</b> קק״ל מעל היעד') +
+      ' · חלבון <b>' + fmt(pr) + '</b>/' + fmt(g.protein) + ' ג׳</span><span class="k-go">קלורי ←</span>';
+  }
+  draw();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') draw(); });
+  window.addEventListener('storage', function (e) { if (e.key === 'kalori.v1') draw(); });
+})();
+</script>
 </body>
 </html>
