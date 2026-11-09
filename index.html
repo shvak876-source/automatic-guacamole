@@ -208,6 +208,8 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .set-ex .pic { width: 52px; }
 .set-ex.off .pic, .set-ex.off input[type=text] { opacity: .4; }
 .set-ex input[type=text] { width: 100%; min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 0 10px; }
+.save-nag { width: 100%; border: 0; border-radius: var(--radius); padding: 12px 14px; background: var(--both); color: #fff; font-weight: 500; text-align: start; }
+.save-nag b { text-decoration: underline; }
 .add-ex { justify-self: start; border-style: dashed; color: var(--accent); }
 .set-ex .sub { font-size: 11px; color: var(--muted); padding-top: 2px; }
 .switch { position: relative; width: 48px; height: 28px; border-radius: 999px; border: 0; background: var(--line); justify-self: end; }
@@ -499,7 +501,9 @@ function renderWorkout(day) {
     const gi = plan(day).findIndex((_, i) => !groupDone(day, i));
     if (gi >= 0) openGroups.add(day + gi);
   }
-  let html = `
+  const ow = openWorkout();
+  let html = ow && ow[0] === day ? `<button class="save-nag" id="nagSave">האימון פתוח כבר ${Math.round(ow[2])} דקות ועוד לא נשמר · <b>לשמור עכשיו</b></button>` : '';
+  html += `
     <label class="warm">
       <input type="checkbox" id="warmChk" ${d.warm ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--done)">
       <span class="t"><b>חימום 5 דקות</b> <small style="display:inline">· הליכה / אופניים</small></span>
@@ -815,10 +819,35 @@ function restOver() {
   if (restNotified) return; restNotified = true;
   beep();
   if (navigator.vibrate) { try { navigator.vibrate([300, 120, 300]); } catch (e) {} }
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const opts = { body: 'זמן לסט הבא 💪', tag: 'rest', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' };
-  try { if (swReg) swReg.showNotification('המנוחה נגמרה', opts); else new Notification('המנוחה נגמרה', opts); } catch (e) {}
+  notify('המנוחה נגמרה', 'זמן לסט הבא 💪', 'rest');
 }
+function notify(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = { body, tag, renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' };
+  try { if (swReg) swReg.showNotification(title, opts); else new Notification(title, opts); } catch (e) {}
+}
+
+// ---------- Unsaved workout reminder: 90 minutes after the first set, then every 30, up to 4 hours ----------
+const SAVE_FIRST = 90, SAVE_EVERY = 30, SAVE_STOP = 240;
+function openWorkout() {
+  // The A/B workout that is in progress: started, has a ticked set, not saved yet
+  return ['A', 'B'].map(day => [day, state.drafts[day]])
+    .filter(([, d]) => d && d.start && Object.values(d.ex || {}).some(x => x.some(y => y.done)))
+    .map(([day, d]) => [day, d, (Date.now() - new Date(d.start)) / 60000])
+    .filter(([, , min]) => min >= SAVE_FIRST && min < SAVE_STOP)[0] || null;
+}
+function checkUnsaved() {
+  const w = openWorkout(); if (!w) return;
+  const [day, d, min] = w;
+  const due = Math.floor((min - SAVE_FIRST) / SAVE_EVERY);  // 0 at 90 min, 1 at 120, ...
+  if ((d.reminded ?? -1) >= due) return;
+  d.reminded = due; touch();
+  beep();
+  notify('שכחת לשמור את האימון?', `אימון ${day} פתוח כבר ${Math.round(min)} דקות. היכנס ולחץ "סיום אימון".`, 'save');
+  toast(`אימון ${day} עוד לא נשמר. לחץ "סיום אימון" למטה`);
+}
+setInterval(checkUnsaved, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { checkUnsaved(); if (view === 'A' || view === 'B') render(); } });
 let restTimeout = null;
 function startRest(sec) {
   restEnd = Date.now() + sec * 1000;
@@ -911,7 +940,7 @@ W.addEventListener('click', e => {
   const pr = t.closest('[data-photoreset]');
   if (pr) { const id = pr.dataset.photoreset; delete state.photos[id]; lsWrite(); savePhotoRemote(id, null); render(); toast('חזרה לתמונה המקורית'); return; }
   if (ph) { photoTarget = ph.dataset.photo; $('#photoInput').value = ''; $('#photoInput').click(); return; }
-  if (t.id === 'finishBtn') return finish(view);
+  if (t.id === 'finishBtn' || t.closest('#nagSave')) return finish(view);
   if (t.id === 'resetDay') {
     if (t.dataset.armed) { delete state.drafts[view]; saveDrafts(); render(); toast('האימון אופס'); }
     else { t.dataset.armed = '1'; t.textContent = 'לחץ שוב לאישור האיפוס'; setTimeout(() => { if (t.isConnected) { delete t.dataset.armed; t.textContent = 'איפוס האימון הנוכחי'; } }, 3000); }
