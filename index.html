@@ -368,7 +368,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 2, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-3';
+const APP_VERSION = '10.11.2026-4';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -804,7 +804,8 @@ let settingsTimer = null;
 
 function renderHistory() {
   const list = sorted();
-  const thisWeek = list.filter(s => (s.day === 'A' || s.day === 'B') && new Date(s.date) >= weekStart0()).length;
+  // A/B workouts since Sunday, plus days marked by hand as training days (cardio is not counted)
+  const thisWeek = list.filter(s => (s.day === 'A' || s.day === 'B' || s.day === 'M') && new Date(s.date) >= weekStart0()).length;
   let html = `<div class="card">
       <div class="hist-row"><h3>השבוע <small class="note">(מיום ראשון)</small></h3><span class="num">${thisWeek}/4 אימונים</span></div>
       <div class="bar"><i style="width:${Math.min(thisWeek / 4, 1) * 100}%"></i></div>
