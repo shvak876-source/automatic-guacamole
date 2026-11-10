@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="icon" href="../icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="ימי אימון">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>ימי אימון</title>
+<meta name="theme-color" content="#0b0c0f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* One screen: a big "report a workout" button and a year grid of training days (newest year first). */
+:root {
+  --bg: #0b0c0f; --surface: #15171c; --ink: #f3f4f6; --muted: #8b919c; --line: #262a32;
+  --rest: #333943; --accent: #ffb020; --accent-2: #ff6a1a; --accent-ink: #160f02; --done: #22c55e;
+  --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --font-display: "Karantina", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Hebrew", "Arial Hebrew", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius: 14px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; } }
+:root[data-theme="dark"] { color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--ink); font: 15px/1.5 var(--font-body);
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255,130,30,.13), transparent 60%) no-repeat, var(--bg);
+  background-attachment: fixed;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.wrap { max-width: 640px; margin: 0 auto; display: grid; gap: 16px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 44px; line-height: .9; margin: 0; }
+h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.report {
+  width: 100%; border: 0; border-radius: 18px; padding: 18px; background: var(--grad); color: var(--accent-ink);
+  font-family: var(--font-display); font-weight: 700; font-size: 36px; line-height: 1; box-shadow: 0 12px 30px -12px rgba(255,130,30,.7);
+}
+.report.done { background: var(--surface); color: var(--done); border: 1px solid var(--done); box-shadow: none; font-size: 30px; }
+.sub { text-align: center; font-size: 13px; color: var(--muted); margin-top: -8px; }
+.sub button { background: none; border: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 0; font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.stats b { display: block; font-family: var(--font-num); font-size: 26px; color: var(--accent); }
+.stats span { font-size: 12px; color: var(--muted); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-inline-end: 5px; background: var(--accent); }
+.legend i.idle { background: var(--rest); }
+.year { display: grid; gap: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.year .row { display: flex; justify-content: space-between; font-size: 14px; }
+.year .row span { color: var(--muted); font-family: var(--font-num); font-size: 13px; }
+.heat { margin-inline: -12px; }
+.heat svg { display: block; width: 100%; height: auto; direction: ltr; }
+.heat .lbl { font-size: 8.5px; fill: var(--muted); font-family: var(--font-body); }
+.heat .c { fill: var(--rest); }
+.heat .c.on { fill: var(--accent); }
+.heat .c.today { stroke: var(--ink); stroke-width: 1; }
+.heat .c.past { cursor: pointer; }
+.note { font-size: 12px; color: var(--muted); margin: 0; text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 8px 14px; font-size: 14px; z-index: 9; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ימי <b>אימון</b></h1>
+  <button class="report" id="report">דיווח אימון</button>
+  <div class="sub" id="sub" hidden></div>
+  <section class="card" id="cal"></section>
+  <p class="note">אפשר גם ללחוץ על משבצת של יום שעבר כדי לסמן או לבטל אותו.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+// Storage: the set of training days ("2026-11-10") in this browser only
+const KEY = 'streak.v1';
+let days = new Set();
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.days)) days = new Set(s.days); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify({ days: [...days] })); } catch (e) { toast('הדפדפן לא שומר נתונים (מצב גלישה פרטית?)'); } }
+
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const keyOf = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+let toastT;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2000); }
+
+const MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+// One cell per day, a column per week (Sunday on top), January on the left
+function yearHTML(year, todayKey) {
+  const C = 7, S = C - 1, jan1 = new Date(year, 0, 1), off = jan1.getDay();
+  let cells = '', labels = '', n = 0;
+  for (let d = new Date(jan1); d.getFullYear() === year; d.setDate(d.getDate() + 1)) {
+    const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), k = keyOf(d), on = days.has(k);
+    if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${MONTHS[d.getMonth()]}</text>`;
+    if (on) n++;
+    cells += `<rect class="c${on ? ' on' : ''}${k === todayKey ? ' today' : ''}${k <= todayKey ? ' past' : ''}" data-k="${k}" x="${col * C}" y="${14 + d.getDay() * C}" width="${S}" height="${S}" rx="1.2"/>`;
+  }
+  return `<div class="year"><div class="row"><b>${year}</b><span>${n} ימים</span></div>
+    <div class="heat"><svg viewBox="0 0 ${53 * C + S} ${14 + 7 * C - 1}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
+}
+
+function render() {
+  const now = new Date(), todayKey = keyOf(now), y = now.getFullYear();
+  const done = days.has(todayKey);
+  $('#report').textContent = done ? '✓ דיווחת על היום' : 'דיווח אימון';
+  $('#report').classList.toggle('done', done);
+  $('#sub').hidden = !done;
+  $('#sub').innerHTML = done ? '<button id="undo">ביטול הדיווח של היום</button>' : '';
+
+  // Weeks in a row (Sunday–Saturday) with at least one training day; this week counts once it has one
+  const weekOf = d => { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return keyOf(x); };
+  const weeks = new Set([...days].map(k => weekOf(fromKey(k))));
+  let w = fromKey(weekOf(now)), streak = 0;
+  if (!weeks.has(keyOf(w))) w.setDate(w.getDate() - 7);
+  while (weeks.has(keyOf(w))) { streak++; w.setDate(w.getDate() - 7); }
+  const inYear = [...days].filter(k => k.startsWith(y + '-')).length;
+  const oldest = days.size ? Math.min(...[...days].map(k => +k.slice(0, 4))) : y;
+
+  let html = `<div class="stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
+    <div class="legend"><span><i></i>יום אימון</span><span><i class="idle"></i>מנוחה</span></div>`;
+  for (let yr = y; yr >= oldest; yr--) html += yearHTML(yr, todayKey);
+  $('#cal').innerHTML = html;
+}
+
+$('#report').addEventListener('click', () => {
+  const k = keyOf(new Date());
+  if (days.has(k)) return;
+  days.add(k); save(); render(); toast('האימון של היום נשמר 💪');
+  if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+});
+$('#sub').addEventListener('click', e => {
+  if (e.target.id !== 'undo') return;
+  days.delete(keyOf(new Date())); save(); render(); toast('הדיווח של היום בוטל');
+});
+$('#cal').addEventListener('click', e => {
+  const c = e.target.closest('.c.past'); if (!c) return;
+  const k = c.dataset.k, d = fromKey(k), label = d.getDate() + '.' + (d.getMonth() + 1);
+  if (days.has(k)) { days.delete(k); toast(`${label} בוטל`); } else { days.add(k); toast(`${label} סומן כיום אימון`); }
+  save(); render();
+});
+// A new day may start while the app stays open
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
+
+// Offline: the site's service worker (one folder up) keeps a copy of the page
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('../sw.js', { updateViaCache: 'none' }).catch(() => {});
+}
+render();
+})();
+</script>
+</body>
+</html>
