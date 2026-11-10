@@ -66,6 +66,15 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .heat .c.past { cursor: pointer; }
 .note { font-size: 12px; color: var(--muted); margin: 0; text-align: center; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 8px 14px; font-size: 14px; z-index: 9; }
+.guide h2 { margin: 0; font-family: var(--font-display); font-size: 30px; line-height: 1; }
+.gnote { margin: 0; font-size: 13px; color: var(--muted); }
+.guide details { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.guide summary { font-weight: 600; cursor: pointer; }
+.guide ol { margin: 8px 0 2px; padding-inline-start: 22px; display: grid; gap: 6px; font-size: 14px; }
+.guide b { color: var(--accent); font-weight: 600; }
+.ic { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
+.install { border: 0; border-radius: 12px; padding: 12px; background: var(--grad); color: var(--accent-ink); font-weight: 600; font-size: 16px; }
+.link { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 4px; justify-self: center; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -76,6 +85,32 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
   <div class="sub" id="sub" hidden></div>
   <section class="card" id="cal"></section>
   <p class="note">אפשר גם ללחוץ על משבצת של יום שעבר כדי לסמן או לבטל אותו.</p>
+  <section class="card guide" id="guide" hidden>
+    <h2>הוספה למסך הבית</h2>
+    <p class="gnote">ככה האתר נפתח כמו אפליקציה, באייקון משלו ובמסך מלא.</p>
+    <button class="install" id="install" hidden>התקנה בלחיצה</button>
+    <details id="gIos">
+      <summary>אייפון (ספארי)</summary>
+      <ol>
+        <li>פתח את הקישור ב<b>ספארי</b>. מכרום או מתוך וואטסאפ זה לא יעבוד, אז אם צריך לחץ על הקישור ובחר "פתח בספארי".</li>
+        <li>לחץ על כפתור <b>השיתוף</b> <span class="ic">⬆︎</span> (ריבוע עם חץ למעלה), בתחתית המסך או ליד שורת הכתובת.</li>
+        <li>גלול למטה ובחר <b>"הוסף למסך הבית"</b>. אם לא רואים: "עוד" ← "הוסף למסך הבית".</li>
+        <li>לחץ <b>"הוסף"</b> בפינה. האייקון "ימי אימון" יופיע במסך הבית.</li>
+      </ol>
+    </details>
+    <details id="gAnd">
+      <summary>אנדרואיד (כרום)</summary>
+      <ol>
+        <li>פתח את הקישור ב<b>כרום</b>.</li>
+        <li>לחץ על <b>שלוש הנקודות</b> <span class="ic">⋮</span> למעלה בצד.</li>
+        <li>בחר <b>"הוספה למסך הבית"</b> או <b>"התקנת האפליקציה"</b>.</li>
+        <li>אשר עם <b>"הוספה"</b> / <b>"התקנה"</b>.</li>
+      </ol>
+    </details>
+    <p class="gnote">מעכשיו תמיד תפתח מהאייקון. הימים שסימנת נשמרים בטלפון הזה.</p>
+    <button class="link" id="hideGuide">הבנתי, הסתר את המדריך</button>
+  </section>
+  <button class="link" id="showGuide" hidden>איך מוסיפים למסך הבית?</button>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -156,6 +191,32 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('../sw.js', { updateViaCache: 'none' }).catch(() => {});
 }
+// ---------- Add-to-home-screen guide: hidden once opened from the icon, or after "הבנתי" ----------
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let guideHidden = false;
+try { guideHidden = localStorage.getItem('streak.guide') === 'hidden'; } catch (e) {}
+function showGuide(on) {
+  $('#guide').hidden = !on;
+  $('#showGuide').hidden = on || standalone;
+}
+if (!standalone) {
+  // Open the steps for this phone first; the other ones stay one tap away
+  (isIOS ? $('#gIos') : $('#gAnd')).open = true;
+  showGuide(!guideHidden);
+}
+$('#hideGuide').addEventListener('click', () => { try { localStorage.setItem('streak.guide', 'hidden'); } catch (e) {} showGuide(false); });
+$('#showGuide').addEventListener('click', () => { showGuide(true); $('#guide').scrollIntoView({ behavior: 'smooth' }); });
+// Android/Chrome can install with one tap
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#install').hidden = false; });
+$('#install').addEventListener('click', async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  try { await installEvt.userChoice; } catch (e) {}
+  installEvt = null; $('#install').hidden = true;
+});
+
 render();
 })();
 </script>
