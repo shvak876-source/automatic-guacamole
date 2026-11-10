@@ -25,6 +25,7 @@
   --ink: #f3f4f6;
   --muted: #8b919c;
   --line: #262a32;
+  --cardio: #38bdf8;       /* cardio days in the calendar */
   --rest: #333943;         /* a calendar day without training */
   --accent: #ffb020;      /* amber */
   --accent-2: #ff6a1a;    /* orange, the far end of the accent gradient */
@@ -42,7 +43,7 @@
   color-scheme: dark;
 }
 /* Accent colours and a light mode, picked in settings */
-:root[data-accent="blue"]   { --accent: #38bdf8; --accent-2: #6366f1; --accent-ink: #03111c; --accent-soft: #0c2a3a; --glow: 80,140,255; }
+:root[data-accent="blue"]   { --cardio: #f472b6; --accent: #38bdf8; --accent-2: #6366f1; --accent-ink: #03111c; --accent-soft: #0c2a3a; --glow: 80,140,255; }
 :root[data-accent="green"]  { --accent: #a3e635; --accent-2: #16a34a; --accent-ink: #0a1402; --accent-soft: #1e2e0a; --glow: 120,220,60; }
 :root[data-accent="red"]    { --accent: #ff6b5f; --accent-2: #e11d48; --accent-ink: #1a0507; --accent-soft: #3a1014; --glow: 240,60,70; }
 :root[data-accent="purple"] { --accent: #d08cff; --accent-2: #7c3aed; --accent-ink: #12041f; --accent-soft: #2a1440; --glow: 150,80,240; }
@@ -211,7 +212,9 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .heat-stats span { font-size: 12px; color: var(--muted); }
 .heat-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
 .heat-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-inline-end: 5px; background: var(--accent); }
-.heat-legend i.both { background: var(--both); }
+.heat-legend { flex-wrap: wrap; gap: 6px 14px; }
+.heat-legend i.cardio { background: var(--cardio); }
+.heat-legend i.both { background: linear-gradient(135deg, var(--accent) 50%, var(--cardio) 50%); }
 .heat-legend i.idle { background: var(--rest); }
 .heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
 .heat-year .hist-row { font-size: 14px; }
@@ -220,7 +223,8 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .heat .lbl { font-size: 8.5px; fill: var(--muted); font-family: inherit; }
 .heat .c { fill: var(--rest); }
 .heat .c.on { fill: var(--accent); }
-.heat .c.both { fill: var(--both); }
+.heat .c.cardio { fill: var(--cardio); }
+.heat .half { fill: var(--accent); }
 .heat .c.today { stroke: var(--ink); stroke-width: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .set-ex { display: grid; grid-template-columns: 52px 1fr 52px; gap: 10px; align-items: center; padding-block: 8px; border-top: 1px solid var(--line); }
@@ -382,7 +386,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 6, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-7';
+const APP_VERSION = '10.11.2026-8';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -666,7 +670,7 @@ function spark(points) {
 }
 
 // ---------- Training days calendar: one cell per day, a column per week, Jan → Dec ----------
-// Every training day (weights, cardio or a marked day) is one colour.
+// Weights (or a marked day) = accent, cardio = --cardio, a day with both is split diagonally.
 const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 const HE_MONTHS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
 function heatYear(year, days, todayKey) {
@@ -676,14 +680,17 @@ function heatYear(year, days, todayKey) {
     const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), row = d.getDay(), k = dayKey(d), v = days.get(k);
     if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${HE_MONTHS[d.getMonth()]}</text>`;
     if (v) n++;
-    cells += `<rect class="c${v === 3 ? ' both' : v ? ' on' : ''}${k === todayKey ? ' today' : ''}" x="${col * C}" y="${14 + row * C}" width="${C - 1.2}" height="${C - 1.2}" rx="1.2"/>`;
+    const x = col * C, y = 14 + row * C, S = C - 1.2;
+    cells += `<rect class="c${v === 1 ? ' on' : v ? ' cardio' : ''}${k === todayKey ? ' today' : ''}" x="${x}" y="${y}" width="${S}" height="${S}" rx="1.2"/>`;
+    // Both on one day: cardio square with the weights colour over its upper-left half
+    if (v === 3) cells += `<polygon class="half" points="${x},${y} ${x + S},${y} ${x},${y + S}"/>`;
   }
   return `<div class="heat-year"><div class="hist-row"><b>${year}</b><span class="d num">${n} ימים</span></div>
     <div class="heat"><svg viewBox="-3 0 ${54 * C + 3} ${14 + 7 * C}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
 }
 function heatHTML(list) {
   const days = new Map();  // dayKey → 1 weights, 2 cardio, 3 both
-  list.forEach(s => { const k = dayKey(new Date(s.date)); days.set(k, 1); });
+  list.forEach(s => { const k = dayKey(new Date(s.date)); days.set(k, (days.get(k) || 0) | (s.day === 'C' ? 2 : 1)); });
   const now = new Date(), todayKey = dayKey(now), thisYear = now.getFullYear();
   const oldest = list.length ? new Date(list[list.length - 1].date) : now;
   const inYear = [...days.keys()].filter(k => k.startsWith(thisYear + '-')).length;
@@ -697,7 +704,7 @@ function heatHTML(list) {
   for (let y = thisYear; y >= oldest.getFullYear(); y--) body += heatYear(y, days, todayKey);
   return `<div class="card"><h3>ימי אימון</h3>
     <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
-    <div class="heat-legend"><span><i></i>יום אימון</span><span><i class="idle"></i>מנוחה</span></div>
+    <div class="heat-legend"><span><i></i>אימון</span><span><i class="cardio"></i>אירובי</span><span><i class="both"></i>שניהם</span><span><i class="idle"></i>מנוחה</span></div>
     ${body}</div>`;
 }
 
