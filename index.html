@@ -218,7 +218,7 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .heat-legend i.idle { background: var(--rest); }
 .heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
 .heat-year .hist-row { font-size: 14px; }
-.heat { margin-inline: -8px; }
+.heat { margin-inline: -12px; }  /* almost to the card's edge: every pixel goes to the squares */
 .heat svg { display: block; width: 100%; height: auto; direction: ltr; }
 .heat .lbl { font-size: 8.5px; fill: var(--muted); font-family: inherit; }
 .heat .c { fill: var(--rest); }
@@ -386,7 +386,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 6, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-8';
+const APP_VERSION = '10.11.2026-9';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -680,13 +680,13 @@ function heatYear(year, days, todayKey) {
     const i = Math.round((d - jan1) / 864e5) + off, col = Math.floor(i / 7), row = d.getDay(), k = dayKey(d), v = days.get(k);
     if (d.getDate() === 1) labels += `<text class="lbl" x="${col * C + 9}" y="9" text-anchor="middle">${HE_MONTHS[d.getMonth()]}</text>`;
     if (v) n++;
-    const x = col * C, y = 14 + row * C, S = C - 1.2;
+    const x = col * C, y = 14 + row * C, S = C - 1;
     cells += `<rect class="c${v === 1 ? ' on' : v ? ' cardio' : ''}${k === todayKey ? ' today' : ''}" x="${x}" y="${y}" width="${S}" height="${S}" rx="1.2"/>`;
     // Both on one day: cardio square with the weights colour over its upper-left half
     if (v === 3) cells += `<polygon class="half" points="${x},${y} ${x + S},${y} ${x},${y + S}"/>`;
   }
   return `<div class="heat-year"><div class="hist-row"><b>${year}</b><span class="d num">${n} ימים</span></div>
-    <div class="heat"><svg viewBox="-3 0 ${54 * C + 3} ${14 + 7 * C}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
+    <div class="heat"><svg viewBox="0 0 ${53 * C + C - 1} ${14 + 7 * C - 1}" role="img" aria-label="${n} ימי אימון ב-${year}">${labels}${cells}</svg></div></div>`;
 }
 function heatHTML(list) {
   const days = new Map();  // dayKey → 1 weights, 2 cardio, 3 both
