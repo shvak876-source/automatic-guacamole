@@ -25,6 +25,7 @@
   --ink: #f3f4f6;
   --muted: #8b919c;
   --line: #262a32;
+  --rest: #333943;         /* a calendar day without training */
   --accent: #ffb020;      /* amber */
   --accent-2: #ff6a1a;    /* orange, the far end of the accent gradient */
   --accent-ink: #160f02;
@@ -47,7 +48,7 @@
 :root[data-accent="purple"] { --accent: #d08cff; --accent-2: #7c3aed; --accent-ink: #12041f; --accent-soft: #2a1440; --glow: 150,80,240; }
 :root[data-accent="gold"]   { --accent: #e0a92e; --accent-2: #c28a12; --accent-ink: #15130d; --accent-soft: #33290f; --glow: 200,150,40; }
 :root[data-mode="light"] {
-  --bg: #f3f4f6; --surface: #ffffff; --surface-2: #f8f8fa; --ink: #111318; --muted: #626a75; --line: #e1e3e8;
+  --bg: #f3f4f6; --surface: #ffffff; --surface-2: #f8f8fa; --ink: #111318; --muted: #626a75; --line: #e1e3e8; --rest: #dcdfe5;
   --done: #16a34a; --done-soft: #dcfce7; color-scheme: light;
 }
 .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -211,12 +212,13 @@ h1 b { background: var(--grad); -webkit-background-clip: text; background-clip: 
 .heat-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
 .heat-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-inline-end: 5px; background: var(--accent); }
 .heat-legend i.both { background: var(--both); }
+.heat-legend i.idle { background: var(--rest); }
 .heat-year { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
 .heat-year .hist-row { font-size: 14px; }
 .heat { margin-inline: -8px; }
 .heat svg { display: block; width: 100%; height: auto; direction: ltr; }
 .heat .lbl { font-size: 8.5px; fill: var(--muted); font-family: inherit; }
-.heat .c { fill: var(--line); }
+.heat .c { fill: var(--rest); }
 .heat .c.on { fill: var(--accent); }
 .heat .c.both { fill: var(--both); }
 .heat .c.today { stroke: var(--ink); stroke-width: 1; }
@@ -380,7 +382,7 @@ const SETS_DEFAULT = 2, SETS_MAX = 6, REP_TOP = 12, REST_SEC = 90;
 //   "s_<id>"   one finished session
 //   "p_<exId>" { src }               a custom exercise photo
 // On load the newer of local and cloud wins, and sessions/photos are merged, so a reload never drops data.
-const APP_VERSION = '10.11.2026-6';
+const APP_VERSION = '10.11.2026-7';
 const LS_KEY = 'gymAB.v1';
 let state = { sessions: [], drafts: {}, photos: {}, updated: 0, settings: { off: {}, names: {}, custom: {}, updated: 0 } };
 let storageOk = true;
@@ -695,7 +697,7 @@ function heatHTML(list) {
   for (let y = thisYear; y >= oldest.getFullYear(); y--) body += heatYear(y, days, todayKey);
   return `<div class="card"><h3>ימי אימון</h3>
     <div class="heat-stats"><div><b>${days.size}</b><span>ימים בסך הכול</span></div><div><b>${inYear}</b><span>השנה</span></div><div><b>${streak}</b><span>שבועות ברצף</span></div></div>
-    <div class="heat-legend"><span><i></i>יום אימון</span></div>
+    <div class="heat-legend"><span><i></i>יום אימון</span><span><i class="idle"></i>מנוחה</span></div>
     ${body}</div>`;
 }
 
